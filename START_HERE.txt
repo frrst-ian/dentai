@@ -1,27 +1,42 @@
 DentAI Dental - Complete Package
 ================================
-WINDOWS QUICK START
+QUICK START
 1. Install Python 3.10 or newer.
-2. Double-click run.bat.
-3. Wait for installation.
+2. Create a venv and install dependencies:
+     python -m venv venv
+     venv\Scripts\activate          (Linux/macOS: source venv/bin/activate)
+     pip install -r requirements.txt
+3. Run: python app.py   (or double-click run.bat on Windows)
 4. Open http://127.0.0.1:5000
 
+DEMO ACCOUNTS
+- Administrator: admin@dentalai.local     / admin123
+- Dentist:       dentist@dentalai.local   / dentist123
+- Evaluator:     evaluator@dentalai.local / evaluator123
+
+ROLES
+- Evaluator is read-only (no patient/tooth/treatment/appointment edits, no CSV import).
+- Dentist and Administrator can edit clinical data.
+- /users page is Administrator-only.
+
 MODULES
-- Login / Guest access
+- Login / logout
 - Dashboard
 - Patient Management + Add/Edit
 - Dental Chart & Clinical Records (FDI 11-48)
 - Tooth status, notes, and treatment/visit history
 - Dental Risk Assessment + AI Prediction Result
-- Appointments
-- Reports & Analytics
-- User Management
+- Appointments / Reports & Analytics / User Management
 - CSV import API
+- JSON prediction API
 
-DEMO ACCOUNTS
-admin@dentalai.local
-dentist@dentalai.local
-evaluator@dentalai.local
+NOTES
+- On first run the app creates/migrates dental_ai.db and seeds sample data.
+- ML models train lazily on the first prediction; results are cached in models/.
+- Set the DENTAI_SECRET env var outside development.
 
 IMPORTANT
-Academic/demo prototype only. The ML component uses synthetic training data. Sample patient/chart data are not real clinical records. Do not use for real clinical decisions without proper validation, security, authorization, and clinical oversight.
+Academic/demo prototype only. The ML component uses synthetic training data.
+Sample patient/chart data are not real clinical records. Do not use for real
+clinical decisions without proper validation, security, authorization, and
+clinical oversight.

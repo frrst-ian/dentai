@@ -128,6 +128,10 @@ dmypy.json
 # Ruff
 .ruff_cache/
 
+# ML model cache
+models/
+*.joblib
+
 # Databases
 *.db
 *.sqlite
