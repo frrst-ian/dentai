@@ -16,8 +16,13 @@ def create_app(overrides=None):
                 static_folder=config.STATIC_DIR)
     app.config['SECRET_KEY'] = cfg['SECRET_KEY']
     app.config['TESTING'] = cfg['TESTING']
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
+    )
 
-    from . import db
+    from . import csrf, db
+    csrf.init_app(app)
     db.DB_PATH = cfg['DB_PATH']
     db.bootstrap()
 
