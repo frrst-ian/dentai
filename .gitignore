@@ -132,6 +132,13 @@ dmypy.json
 models/
 *.joblib
 
+# Frontend build
+node_modules/
+static/dist/
+
+# Local secret key
+.secret_key
+
 # Databases
 *.db
 *.sqlite
