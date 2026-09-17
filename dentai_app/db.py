@@ -196,17 +196,36 @@ def add_treatment(patient_code, f):
                    datetime.now().isoformat()))
 
 
-def list_appointments():
+def list_appointments(status=''):
+    sql = ('SELECT a.id, a.patient_id, a.date, a.time, a.dentist, a.purpose, a.status, '
+           '       p.name AS patient_name '
+           'FROM appointments a LEFT JOIN patients p ON a.patient_id = p.patient_id')
+    args = ()
+    if status:
+        sql += ' WHERE a.status = ?'
+        args = (status,)
+    sql += ' ORDER BY a.date, a.time, a.id'
     with get_conn() as c:
-        rows = c.execute('SELECT * FROM appointments ORDER BY date, time').fetchall()
+        rows = c.execute(sql, args).fetchall()
     return rows
 
 
-def add_appointment(f):
+def appointment_status_counts():
     with get_conn() as c:
+        rows = c.execute('SELECT status, COUNT(*) n FROM appointments GROUP BY status').fetchall()
+    return {r['status']: r['n'] for r in rows}
+
+
+def add_appointment(f):
+    patient_id = f.get('patient_id') or None
+    name = None
+    with get_conn() as c:
+        if patient_id:
+            row = c.execute('SELECT name FROM patients WHERE patient_id=?', (patient_id,)).fetchone()
+            name = row['name'] if row else None
         c.execute('INSERT INTO appointments(patient_id,patient_name,date,time,dentist,purpose,status) '
                   'VALUES (?,?,?,?,?,?,?)',
-                  (f.get('patient_id'), f.get('patient_name'), f.get('date'), f.get('time'),
+                  (patient_id, name, f.get('date'), f.get('time'),
                    f.get('dentist'), f.get('purpose'), 'Scheduled'))
 
 

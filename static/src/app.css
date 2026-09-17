@@ -326,6 +326,71 @@ textarea {
   transform: none;
 }
 
+/* Appointment filter pills --------------------------------------------------- */
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid rgb(15 23 42 / 0.1);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-slate-600);
+  text-decoration: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+    color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.filter-pill:hover {
+  transform: translateY(-1px);
+  border-color: var(--color-brand-600);
+  color: var(--color-brand-700);
+}
+.filter-pill:active {
+  transform: translateY(0);
+}
+.filter-pill .count {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--color-slate-400);
+}
+.filter-pill--active,
+.filter-pill--active:hover {
+  background-color: var(--color-brand-700);
+  border-color: var(--color-brand-700);
+  color: #fff;
+}
+.filter-pill--active .count {
+  color: rgb(255 255 255 / 0.72);
+}
+
+/* Status update select (appointments table) ---------------------------------- */
+
+.status-update {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+  border-radius: 8px;
+  padding: 5px 26px 5px 9px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 14px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.status-update:hover {
+  box-shadow: 0 2px 6px -2px rgb(15 23 42 / 0.14);
+}
+.status-update:active {
+  transform: translateY(0);
+}
+
 /* Reduced motion: collapse transitions to an instant state ------------------ */
 @media (prefers-reduced-motion: reduce) {
   .tooth-cell {

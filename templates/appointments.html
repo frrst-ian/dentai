@@ -8,12 +8,16 @@
   'Cancelled': 'bg-slate-100 text-slate-600',
   'No-show': 'bg-rose-50 text-rose-700',
 } %}
+{% set status_selects = {
+  'Scheduled': 'border-sky-200 bg-sky-50 text-sky-700',
+  'Completed': 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  'Cancelled': 'border-slate-200 bg-slate-100 text-slate-500',
+  'No-show': 'border-rose-200 bg-rose-50 text-rose-700',
+} %}
 
-<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
-  <div>
-    <h1 class="text-2xl font-semibold tracking-tight">Appointments</h1>
-    <p class="mt-1 text-sm text-slate-500">Scheduled visits across the clinic.</p>
-  </div>
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold tracking-tight">Appointments</h1>
+  <p class="mt-1 text-sm text-slate-500">{{ total_appointments }} scheduled visits across the clinic.</p>
 </div>
 
 {% if is_writer %}
@@ -58,6 +62,21 @@
 {% endif %}
 
 <div class="card overflow-hidden">
+  <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3">
+    <a href="{{ url_for('admin.appointments') }}"
+       class="filter-pill {{ 'filter-pill--active' if not status_filter }}"
+       {% if not status_filter %}aria-current="page"{% endif %}>
+      All <span class="count">{{ total_appointments }}</span>
+    </a>
+    {% for s in status_options %}
+    <a href="{{ url_for('admin.appointments', status=s) }}"
+       class="filter-pill {{ 'filter-pill--active' if status_filter == s }}"
+       {% if status_filter == s %}aria-current="page"{% endif %}>
+      {{ s }} <span class="count">{{ status_counts.get(s, 0) }}</span>
+    </a>
+    {% endfor %}
+  </div>
+
   <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
@@ -68,7 +87,7 @@
           <th class="px-5 py-3 font-medium">Dentist</th>
           <th class="px-5 py-3 font-medium">Purpose</th>
           <th class="px-5 py-3 font-medium">Status</th>
-          {% if is_writer %}<th class="px-5 py-3 text-right font-medium">Update</th>{% endif %}
+          {% if is_writer %}<th class="px-5 py-3 font-medium">Update</th>{% endif %}
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-50">
@@ -77,8 +96,12 @@
           <td class="px-5 py-3 whitespace-nowrap text-slate-600">{{ a.date }}</td>
           <td class="px-5 py-3 whitespace-nowrap text-slate-600">{{ a.time }}</td>
           <td class="px-5 py-3">
+            {% if a.patient_name %}
             <div class="font-medium text-slate-800">{{ a.patient_name }}</div>
-            {% if a.patient_id %}<div class="font-mono text-xs text-slate-400">{{ a.patient_id }}</div>{% endif %}
+            <div class="font-mono text-xs text-slate-400">{{ a.patient_id }}</div>
+            {% else %}
+            <div class="font-mono text-xs text-slate-400">{{ a.patient_id or 'Removed patient' }}</div>
+            {% endif %}
           </td>
           <td class="px-5 py-3 text-slate-600">{{ a.dentist or '-' }}</td>
           <td class="px-5 py-3 text-slate-600">{{ a.purpose or '-' }}</td>
@@ -87,14 +110,14 @@
           </td>
           {% if is_writer %}
           <td class="px-5 py-3">
-            <form method="post" action="{{ url_for('admin.appointment_status', aid=a.id) }}" class="flex items-center justify-end gap-2">
+            <form method="post" action="{{ url_for('admin.appointment_status', aid=a.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <select name="status" class="input !w-auto !rounded-md !px-2 !py-1.5 text-[13px]" aria-label="Update status">
-                {% for s in ['Scheduled', 'Completed', 'Cancelled', 'No-show'] %}
+              <select name="status" class="status-update {{ status_selects.get(a.status, 'border-slate-200 bg-white text-slate-600') }}"
+                onchange="this.form.requestSubmit()" aria-label="Change status for appointment {{ a.id }}">
+                {% for s in status_options %}
                 <option value="{{ s }}" {% if a.status == s %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
               </select>
-              <button type="submit" class="btn btn-secondary btn-sm"><i class="ph ph-check text-base"></i><span class="sr-only">Save status</span></button>
             </form>
           </td>
           {% endif %}
@@ -105,7 +128,10 @@
             <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400">
               <i class="ph ph-calendar-blank text-xl"></i>
             </div>
-            <p class="text-sm text-slate-500">No appointments booked.</p>
+            <p class="text-sm text-slate-500">
+              {% if status_filter %}No {{ status_filter|lower }} appointments.{% else %}No appointments booked.{% endif %}
+            </p>
+            {% if status_filter %}<a href="{{ url_for('admin.appointments') }}" class="btn btn-secondary btn-sm mt-2">Show all</a>{% endif %}
           </td>
         </tr>
         {% endfor %}

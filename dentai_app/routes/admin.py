@@ -1,9 +1,11 @@
-from flask import Blueprint, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from .. import db, ml
 from ..auth import login_required, role_required
 
 bp = Blueprint('admin', __name__)
+
+STATUS_OPTIONS = ['Scheduled', 'Completed', 'Cancelled', 'No-show']
 
 
 @bp.route('/dashboard')
@@ -17,9 +19,16 @@ def dashboard():
 @bp.route('/appointments')
 @login_required
 def appointments():
-    rows = db.list_appointments()
+    status_filter = request.args.get('status') or ''
+    if status_filter not in STATUS_OPTIONS:
+        status_filter = ''
+    rows = db.list_appointments(status=status_filter)
     patients = db.list_patients()
-    return render_template('appointments.html', appointments=rows, patients=patients)
+    status_counts = db.appointment_status_counts()
+    return render_template(
+        'appointments.html', appointments=rows, patients=patients,
+        status_filter=status_filter, status_options=STATUS_OPTIONS,
+        status_counts=status_counts, total_appointments=sum(status_counts.values()))
 
 
 @bp.route('/appointments/add', methods=['POST'])
@@ -27,6 +36,7 @@ def appointments():
 @role_required('Dentist', 'Administrator')
 def appointment_add():
     db.add_appointment(request.form)
+    flash('Appointment booked.')
     return redirect(url_for('admin.appointments'))
 
 
@@ -34,8 +44,10 @@ def appointment_add():
 @login_required
 @role_required('Dentist', 'Administrator')
 def appointment_status(aid):
-    if not db.update_appointment_status(aid, request.form.get('status')):
+    status = request.form.get('status')
+    if not db.update_appointment_status(aid, status):
         return 'Invalid status or appointment not found', 400
+    flash(f'Appointment #{aid} marked {status}.')
     return redirect(url_for('admin.appointments'))
 
 
