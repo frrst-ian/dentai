@@ -68,6 +68,42 @@ def list_patients(limit=None):
     return rows
 
 
+def count_patients(search=''):
+    query = _search_clause(search)
+    with get_conn() as c:
+        row = c.execute(f'SELECT COUNT(*) n FROM patients{query.sql}', query.params).fetchone()
+    return row['n']
+
+
+def patient_page(search='', page=1, per_page=25):
+    query = _search_clause(search)
+    offset = max(page - 1, 0) * per_page
+    with get_conn() as c:
+        rows = c.execute(
+            'SELECT * FROM patients' + query.sql +
+            ' ORDER BY id DESC LIMIT ? OFFSET ?', query.params + (per_page, offset)).fetchall()
+    total = count_patients(search)
+    pages = max((total + per_page - 1) // per_page, 1)
+    return {'rows': rows, 'total': total, 'page': page, 'pages': pages,
+            'per_page': per_page, 'search': search}
+
+
+def _search_clause(search):
+    term = (search or '').strip()
+    if not term:
+        return _SearchClause('', ())
+    like = f'%{term}%'
+    return _SearchClause(
+        ' WHERE name LIKE ? OR patient_id LIKE ? OR phone LIKE ?',
+        (like, like, like))
+
+
+class _SearchClause:
+    def __init__(self, sql, params):
+        self.sql = sql
+        self.params = params
+
+
 def get_patient(pid):
     with get_conn() as c:
         row = c.execute('SELECT * FROM patients WHERE id=?', (pid,)).fetchone()
@@ -93,6 +129,12 @@ def create_patient(f):
              int(f.get('missing_teeth') or 0), f.get('oral_hygiene'),
              f.get('periodontal_status'), datetime.now().isoformat()))
     return patient_id
+
+
+def delete_patient(pid):
+    with get_conn() as c:
+        c.execute('DELETE FROM patients WHERE id=?', (pid,))
+        return c.total_changes > 0
 
 
 def update_patient(pid, f):
@@ -166,6 +208,14 @@ def add_appointment(f):
                   'VALUES (?,?,?,?,?,?,?)',
                   (f.get('patient_id'), f.get('patient_name'), f.get('date'), f.get('time'),
                    f.get('dentist'), f.get('purpose'), 'Scheduled'))
+
+
+def update_appointment_status(aid, status):
+    if status not in ('Scheduled', 'Completed', 'Cancelled', 'No-show'):
+        return False
+    with get_conn() as c:
+        c.execute('UPDATE appointments SET status=? WHERE id=?', (status, aid))
+        return c.total_changes > 0
 
 
 def get_user_by_email(email):

@@ -1,1 +1,88 @@
-{% extends 'base.html' %}{% block content %}<h1>Dashboard</h1><div class="cards"><div class="card"><b>{{ stats.patients }}</b><span>Patients</span></div><div class="card"><b>{{ stats.appointments }}</b><span>Appointments</span></div><div class="card"><b>{{ stats.users }}</b><span>Users</span></div></div><div class="panel"><h2>Recent Patients</h2><table><tr><th>ID</th><th>Name</th><th>Age</th><th>Status</th><th>Action</th></tr>{% for p in recent %}<tr><td>{{p.patient_id}}</td><td>{{p.name}}</td><td>{{p.age}}</td><td>{{p.status}}</td><td><a class="btn" href="/patients/{{p.id}}/chart">Open Dental Chart</a></td></tr>{% endfor %}</table></div>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Dashboard - DentAI Dental{% endblock %}
+{% block content %}
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold tracking-tight">Overview</h1>
+  <p class="mt-1 text-sm text-slate-500">Welcome back, {{ session.get('name') }}.</p>
+</div>
+
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+  <div class="card flex items-center gap-4 p-5">
+    <span class="grid h-11 w-11 place-items-center rounded-lg bg-brand-100 text-brand-700">
+      <i class="ph-bold ph-users-three text-[22px]"></i>
+    </span>
+    <div>
+      <div class="text-2xl font-semibold tracking-tight text-slate-900">{{ stats.patients }}</div>
+      <div class="text-sm text-slate-500">Patients</div>
+    </div>
+  </div>
+  <div class="card flex items-center gap-4 p-5">
+    <span class="grid h-11 w-11 place-items-center rounded-lg bg-sky-100 text-sky-700">
+      <i class="ph-bold ph-calendar-blank text-[22px]"></i>
+    </span>
+    <div>
+      <div class="text-2xl font-semibold tracking-tight text-slate-900">{{ stats.appointments }}</div>
+      <div class="text-sm text-slate-500">Appointments</div>
+    </div>
+  </div>
+  <div class="card flex items-center gap-4 p-5">
+    <span class="grid h-11 w-11 place-items-center rounded-lg bg-violet-100 text-violet-700">
+      <i class="ph-bold ph-shield-check text-[22px]"></i>
+    </span>
+    <div>
+      <div class="text-2xl font-semibold tracking-tight text-slate-900">{{ stats.users }}</div>
+      <div class="text-sm text-slate-500">Active users</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-6 overflow-hidden">
+  <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+    <h2 class="text-[15px] font-semibold tracking-tight text-slate-900">Recent patients</h2>
+    <a href="{{ url_for('patients.patients') }}" class="btn btn-secondary btn-sm">View all</a>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+          <th class="px-5 py-3 font-medium">Patient ID</th>
+          <th class="px-5 py-3 font-medium">Name</th>
+          <th class="px-5 py-3 font-medium">Age</th>
+          <th class="px-5 py-3 font-medium">Status</th>
+          <th class="px-5 py-3 text-right font-medium">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for p in recent %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-5 py-3 font-mono text-xs text-slate-500">{{ p.patient_id }}</td>
+          <td class="px-5 py-3 font-medium text-slate-800">{{ p.name }}</td>
+          <td class="px-5 py-3 text-slate-600">{{ p.age }}</td>
+          <td class="px-5 py-3">
+            {% if (p.periodontal_status or 'Healthy') == 'Healthy' %}
+            <span class="badge bg-emerald-50 text-emerald-700"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Healthy</span>
+            {% elif p.periodontal_status == 'Severe' %}
+            <span class="badge bg-rose-50 text-rose-700"><span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>Severe</span>
+            {% else %}
+            <span class="badge bg-amber-50 text-amber-700"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>{{ p.periodontal_status }}</span>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3 text-right">
+            <a href="{{ url_for('chart.patient_chart', pid=p.id) }}" class="btn btn-primary btn-sm">Open chart</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="px-5 py-10 text-center">
+            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400">
+              <i class="ph ph-users-three text-xl"></i>
+            </div>
+            <p class="text-sm text-slate-500">No patients yet.</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

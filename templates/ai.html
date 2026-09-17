@@ -1,1 +1,112 @@
-{% extends 'base.html' %}{% block content %}<div class="row"><div><h1>🤖 AI Prediction</h1><p class="muted">Patient: <strong>{{patient.name}}</strong> · {{patient.patient_id}}</p></div><a class="btn secondary" href="/patients/{{patient.id}}/chart">← Back to Patient</a></div><div class="panel"><div class="notice"><strong>Decision-support only:</strong> This prototype prediction is based on the current patient record and should not replace a dentist's professional judgment.</div><form method="post" action="/predict" class="form-grid"><input type="hidden" name="patient_id" value="{{patient.patient_id}}"><input type="hidden" name="patient_name" value="{{patient.name}}"><label>Age<input name="age" value="{{patient.age}}" required></label><label>Sex<select name="sex"><option {% if patient.sex=='Male' %}selected{% endif %}>Male</option><option {% if patient.sex=='Female' %}selected{% endif %}>Female</option></select></label><label>Smoking<select name="smoking"><option {% if patient.smoking=='Yes' %}selected{% endif %}>Yes</option><option {% if patient.smoking=='No' %}selected{% endif %}>No</option></select></label><label>Diabetes<select name="diabetes"><option {% if patient.diabetes=='Yes' %}selected{% endif %}>Yes</option><option {% if patient.diabetes=='No' %}selected{% endif %}>No</option></select></label><label>Dental Pain<select name="dental_pain"><option {% if patient.dental_pain=='Yes' %}selected{% endif %}>Yes</option><option {% if patient.dental_pain=='No' %}selected{% endif %}>No</option></select></label><label>Bleeding Gums<select name="bleeding_gums"><option {% if patient.bleeding_gums=='Yes' %}selected{% endif %}>Yes</option><option {% if patient.bleeding_gums=='No' %}selected{% endif %}>No</option></select></label><label>Caries Count<input type="number" name="caries_count" min="0" value="{{patient.caries_count}}"></label><label>Missing Teeth<input type="number" name="missing_teeth" min="0" value="{{patient.missing_teeth}}"></label><label>Oral Hygiene<select name="oral_hygiene"><option {% if patient.oral_hygiene=='Good' %}selected{% endif %}>Good</option><option {% if patient.oral_hygiene=='Fair' %}selected{% endif %}>Fair</option><option {% if patient.oral_hygiene=='Poor' %}selected{% endif %}>Poor</option></select></label><label>Periodontal Status<select name="periodontal_status"><option {% if patient.periodontal_status=='Healthy' %}selected{% endif %}>Healthy</option><option {% if patient.periodontal_status=='Mild' %}selected{% endif %}>Mild</option><option {% if patient.periodontal_status=='Moderate' %}selected{% endif %}>Moderate</option><option {% if patient.periodontal_status=='Severe' %}selected{% endif %}>Severe</option></select></label><label>AI Model<select name="model"><option>Random Forest</option><option>Logistic Regression</option><option>Decision Tree</option><option>Support Vector Machine</option><option>Gradient Boosting</option></select></label><div><button class="btn ai" type="submit">🤖 Run AI Prediction</button></div></form></div>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}AI prediction - {{ patient.name }} - DentAI Dental{% endblock %}
+{% block content %}
+{% set p = patient %}
+{% set models = ['Random Forest', 'Logistic Regression', 'Decision Tree', 'Support Vector Machine', 'Gradient Boosting'] %}
+
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-semibold tracking-tight">AI treatment-urgency prediction</h1>
+    <p class="mt-1 text-sm text-slate-500">{{ p.name }} - {{ p.patient_id }}</p>
+  </div>
+  <a href="{{ url_for('chart.patient_chart', pid=p.id) }}" class="btn btn-secondary">
+    <i class="ph ph-arrow-left"></i> Back to patient
+  </a>
+</div>
+
+<div class="card mb-6 flex gap-3 border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+  <i class="ph-bold ph-warning shrink-0 text-lg text-amber-600"></i>
+  <p class="leading-relaxed">
+    Decision-support only. This prototype prediction is based on the current
+    patient record and synthetic training data. It never replaces a dentist's
+    professional judgment.
+  </p>
+</div>
+
+<form method="post" action="{{ url_for('ai.predict') }}" class="card">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="patient_id" value="{{ p.patient_id }}">
+  <input type="hidden" name="patient_name" value="{{ p.name }}">
+
+  <div class="border-b border-slate-100 px-5 py-4">
+    <h2 class="text-[15px] font-semibold tracking-tight text-slate-900">Assessment inputs</h2>
+    <p class="mt-0.5 text-[13px] text-slate-500">Prefilled from the patient record. Adjust if anything changed at the chair.</p>
+  </div>
+
+  <div class="grid grid-cols-1 gap-x-5 gap-y-4 px-5 py-5 sm:grid-cols-2">
+    <div>
+      <label class="label" for="age">Age</label>
+      <input class="input" id="age" name="age" type="number" min="0" max="120" value="{{ p.age }}" required>
+    </div>
+    <div>
+      <label class="label" for="sex">Sex</label>
+      {% set sex_val = p.sex if p.sex else 'Male' %}
+      <select class="input" id="sex" name="sex">
+        <option value="Male" {% if sex_val == 'Male' %}selected{% endif %}>Male</option>
+        <option value="Female" {% if sex_val == 'Female' %}selected{% endif %}>Female</option>
+      </select>
+    </div>
+
+    {% macro yesno(name, label, val) -%}
+    <div>
+      <label class="label" for="{{ name }}">{{ label }}</label>
+      {% set v = val %}
+      <select class="input" id="{{ name }}" name="{{ name }}">
+        <option value="No" {% if v != 'Yes' %}selected{% endif %}>No</option>
+        <option value="Yes" {% if v == 'Yes' %}selected{% endif %}>Yes</option>
+      </select>
+    </div>
+    {%- endmacro %}
+
+    {{ yesno('smoking', 'Smoking', p.smoking or 'No') }}
+    {{ yesno('diabetes', 'Diabetes', p.diabetes or 'No') }}
+    {{ yesno('dental_pain', 'Dental pain', p.dental_pain or 'No') }}
+    {{ yesno('bleeding_gums', 'Bleeding gums', p.bleeding_gums or 'No') }}
+
+    <div>
+      <label class="label" for="caries_count">Caries count</label>
+      <input class="input" id="caries_count" name="caries_count" type="number" min="0" value="{{ p.caries_count or 0 }}">
+    </div>
+    <div>
+      <label class="label" for="missing_teeth">Missing teeth</label>
+      <input class="input" id="missing_teeth" name="missing_teeth" type="number" min="0" value="{{ p.missing_teeth or 0 }}">
+    </div>
+
+    <div>
+      <label class="label" for="oral_hygiene">Oral hygiene</label>
+      {% set hygiene_val = p.oral_hygiene if p.oral_hygiene else 'Good' %}
+      <select class="input" id="oral_hygiene" name="oral_hygiene">
+        {% for opt in ['Good', 'Fair', 'Poor'] %}
+        <option value="{{ opt }}" {% if hygiene_val == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="label" for="periodontal_status">Periodontal status</label>
+      {% set perio_val = p.periodontal_status if p.periodontal_status else 'Healthy' %}
+      <select class="input" id="periodontal_status" name="periodontal_status">
+        {% for opt in ['Healthy', 'Mild', 'Moderate', 'Severe'] %}
+        <option value="{{ opt }}" {% if perio_val == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="sm:col-span-2">
+      <label class="label" for="model">Model</label>
+      <select class="input" id="model" name="model">
+        {% for m in models %}
+        <option value="{{ m }}" {% if m == 'Random Forest' %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+      <p class="mt-1 text-xs text-slate-400">Metrics for every model are on the Reports page. Random Forest is the default.</p>
+    </div>
+  </div>
+
+  <div class="flex items-center justify-end gap-3 border-t border-slate-100 px-5 py-4">
+    <a href="{{ url_for('chart.patient_chart', pid=p.id) }}" class="btn btn-secondary">Cancel</a>
+    <button type="submit" class="btn btn-primary">
+      <i class="ph-bold ph-stethoscope"></i> Run assessment
+    </button>
+  </div>
+</form>
+{% endblock %}

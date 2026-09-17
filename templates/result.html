@@ -1,1 +1,68 @@
-{% extends 'base.html' %}{% block content %}<h1>AI Prediction Result</h1><div class="panel"><h2>{{patient}}</h2><p><b>Prediction:</b> {{result.prediction}}</p><p><b>Probability:</b> {{result.probability}}%</p><p><b>Model:</b> {{result.model}}</p><h3>Signals</h3><ul>{% for a,b in result.reasons %}<li>{{a}} — {{b}}</li>{% endfor %}</ul></div>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Prediction result - DentAI Dental{% endblock %}
+{% block content %}
+{% set urgent = result.prediction == 'Urgent' %}
+
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold tracking-tight">Prediction result</h1>
+  <p class="mt-1 text-sm text-slate-500">{{ patient }} - reviewed against the current record.</p>
+</div>
+
+<div class="card overflow-hidden">
+  <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-5 py-5">
+    <div class="flex items-center gap-4">
+      <span class="grid h-12 w-12 place-items-center rounded-xl
+        {% if urgent %}bg-rose-100 text-rose-600{% else %}bg-emerald-100 text-emerald-600{% endif %}">
+        <i class="ph-bold ph-{% if urgent %}warning{% else %}check-circle{% endif %} text-2xl"></i>
+      </span>
+      <div>
+        <div class="text-xs font-medium uppercase tracking-wide text-slate-400">Treatment urgency</div>
+        <div class="text-2xl font-semibold tracking-tight {% if urgent %}text-rose-600{% else %}text-emerald-600{% endif %}">
+          {{ result.prediction }}
+        </div>
+      </div>
+    </div>
+    <div class="text-right">
+      <div class="text-xs font-medium uppercase tracking-wide text-slate-400">Likelihood of urgent care</div>
+      <div class="text-2xl font-semibold tracking-tight text-slate-900">{{ result.urgency }}%</div>
+      <div class="text-xs text-slate-400">Model: {{ result.model }}</div>
+    </div>
+  </div>
+
+  <div class="px-5 py-5">
+    <h2 class="mb-3 text-[15px] font-semibold tracking-tight text-slate-900">Contributing signals</h2>
+    {% if result.reasons %}
+    <ul class="space-y-2">
+      {% for signal, note in result.reasons %}
+      <li class="flex items-start gap-3 rounded-lg bg-slate-50 px-4 py-3">
+        <i class="ph-bold ph-arrow-u-right-up mt-0.5 text-amber-500"></i>
+        <div>
+          <div class="text-sm font-medium text-slate-800">{{ signal }}</div>
+          <div class="text-[13px] text-slate-500">{{ note }}</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-slate-500">No specific urgency signals were identified for this record.</p>
+    {% endif %}
+  </div>
+
+  <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-4">
+    <p class="max-w-xl text-[13px] leading-relaxed text-slate-500">
+      This result is decision support generated from synthetic training data.
+      Confirm the plan with a clinical examination.
+    </p>
+    <div class="flex gap-3">
+      <a href="{{ url_for('ai.risk') }}" class="btn btn-secondary">
+        <i class="ph ph-arrow-left"></i> All patients
+      </a>
+      {% if pid %}
+      <a href="{{ url_for('ai.patient_ai', pid=pid) }}" class="btn btn-primary">
+        <i class="ph-bold ph-stethoscope"></i> New assessment
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{
+  "name": "dentai",
+  "private": true,
+  "scripts": {
+    "build": "tailwindcss -i ./static/src/app.css -o ./static/dist/tailwind.css --minify",
+    "watch": "tailwindcss -i ./static/src/app.css -o ./static/dist/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "@fontsource-variable/geist": "^5.2.5",
+    "@phosphor-icons/web": "^2.1.1",
+    "@tailwindcss/cli": "^4.1.11",
+    "tailwindcss": "^4.1.11"
+  }
+}

@@ -1,1 +1,125 @@
-{% extends 'base.html' %}{% block content %}<div class="row"><h1>Patient Management</h1><a class="btn" href="/patients/new">+ Add Patient</a></div><div class="panel"><table><tr><th>Patient ID</th><th>Name</th><th>Age</th><th>Sex</th><th>Periodontal</th><th>Patient Modules</th><th>Actions</th></tr>{% for p in patients %}<tr><td>{{p.patient_id}}</td><td><strong>{{p.name}}</strong></td><td>{{p.age}}</td><td>{{p.sex}}</td><td>{{p.periodontal_status}}</td><td><a class="btn small" href="/patients/{{p.id}}/chart">🦷 Dental Chart</a> <a class="btn small records" href="/patients/{{p.id}}/chart#records">📋 Clinical Records</a> <a class="btn small ai" href="/patients/{{p.id}}/ai">🤖 AI Prediction</a></td><td><a class="btn small secondary" href="/patients/{{p.id}}/edit">Edit</a></td></tr>{% endfor %}</table></div>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Patients - DentAI Dental{% endblock %}
+{% block content %}
+{% set is_writer = session.get('role') in ('Dentist', 'Administrator') %}
+
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-semibold tracking-tight">Patients</h1>
+    <p class="mt-1 text-sm text-slate-500">{{ total }} record{{ '' if total == 1 else 's' }}{% if search %} matching &ldquo;{{ search }}&rdquo;{% endif %}</p>
+  </div>
+  {% if is_writer %}
+  <a href="{{ url_for('patients.patient_new') }}" class="btn btn-primary">
+    <i class="ph-bold ph-plus"></i> Add patient
+  </a>
+  {% endif %}
+</div>
+
+<div class="mb-4">
+  <form method="get" action="{{ url_for('patients.patients') }}" class="relative max-w-sm" role="search">
+    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-lg text-slate-400"></i>
+    <input type="search" name="q" value="{{ search }}" placeholder="Search name, ID or phone"
+      class="input !pl-10" aria-label="Search patients">
+  </form>
+</div>
+
+<div class="card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+          <th class="px-5 py-3 font-medium">Patient ID</th>
+          <th class="px-5 py-3 font-medium">Name</th>
+          <th class="px-5 py-3 font-medium">Age</th>
+          <th class="px-5 py-3 font-medium">Sex</th>
+          <th class="px-5 py-3 font-medium">Periodontal</th>
+          <th class="px-5 py-3 font-medium">Modules</th>
+          {% if is_writer %}<th class="px-5 py-3 text-right font-medium">Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for p in rows %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-5 py-3 font-mono text-xs text-slate-500">{{ p.patient_id }}</td>
+          <td class="px-5 py-3">
+            <div class="font-medium text-slate-800">{{ p.name }}</div>
+            {% if p.phone %}<div class="text-xs text-slate-400">{{ p.phone }}</div>{% endif %}
+          </td>
+          <td class="px-5 py-3 text-slate-600">{{ p.age }}</td>
+          <td class="px-5 py-3 text-slate-600">{{ p.sex }}</td>
+          <td class="px-5 py-3">
+            {% if p.periodontal_status == 'Severe' %}
+            <span class="badge bg-rose-50 text-rose-700">{{ p.periodontal_status }}</span>
+            {% elif p.periodontal_status in ('Moderate', 'Mild') %}
+            <span class="badge bg-amber-50 text-amber-700">{{ p.periodontal_status }}</span>
+            {% else %}
+            <span class="badge bg-emerald-50 text-emerald-700">{{ p.periodontal_status }}</span>
+            {% endif %}
+          </td>
+          <td class="px-5 py-3">
+            <div class="flex flex-wrap gap-1.5">
+              <a href="{{ url_for('chart.patient_chart', pid=p.id) }}#chart" class="btn btn-secondary btn-sm" title="Dental chart">
+                <i class="ph ph-tooth text-base"></i><span class="sr-only">Dental chart</span>
+              </a>
+              <a href="{{ url_for('chart.patient_chart', pid=p.id) }}#records" class="btn btn-secondary btn-sm" title="Clinical records">
+                <i class="ph ph-clipboard-text text-base"></i><span class="sr-only">Clinical records</span>
+              </a>
+              <a href="{{ url_for('ai.patient_ai', pid=p.id) }}" class="btn btn-secondary btn-sm" title="AI prediction">
+                <i class="ph ph-stethoscope text-base"></i><span class="sr-only">AI prediction</span>
+              </a>
+            </div>
+          </td>
+          {% if is_writer %}
+          <td class="px-5 py-3">
+            <div class="flex items-center justify-end gap-1.5">
+              <a href="{{ url_for('patients.patient_edit', pid=p.id) }}" class="btn btn-secondary btn-sm">
+                <i class="ph ph-pencil text-base"></i><span class="sr-only">Edit</span>
+              </a>
+              <form method="post" action="{{ url_for('patients.patient_delete', pid=p.id) }}"
+                onsubmit="return confirm('Delete the record for {{ p.name|e }}? This removes its chart and treatment history.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-danger btn-sm">
+                  <i class="ph ph-trash text-base"></i><span class="sr-only">Delete</span>
+                </button>
+              </form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="{% if is_writer %}7{% else %}6{% endif %}" class="px-5 py-12 text-center">
+            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400">
+              <i class="ph ph-users-three text-xl"></i>
+            </div>
+            {% if search %}
+            <p class="text-sm text-slate-500">No patients match &ldquo;{{ search }}&rdquo;.</p>
+            {% else %}
+            <p class="text-sm text-slate-500">No patients yet.</p>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pages > 1 %}
+  <div class="flex items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-sm">
+    <span class="text-slate-500">Page {{ page }} of {{ pages }}</span>
+    <div class="flex gap-2">
+      {% if page > 1 %}
+      <a href="{{ url_for('patients.patients', q=search, page=page - 1) }}" class="btn btn-secondary btn-sm">
+        <i class="ph ph-arrow-left"></i> Previous
+      </a>
+      {% endif %}
+      {% if page < pages %}
+      <a href="{{ url_for('patients.patients', q=search, page=page + 1) }}" class="btn btn-secondary btn-sm">
+        Next <i class="ph ph-arrow-right"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

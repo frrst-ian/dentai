@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, session
+from flask import Blueprint, render_template, request
 
 from .. import db, ml
 from ..auth import login_required
@@ -18,7 +18,8 @@ def patient_ai(pid):
 @bp.route('/risk')
 @login_required
 def risk():
-    return render_template('risk.html')
+    patients = db.list_patients()
+    return render_template('risk.html', patients=patients)
 
 
 @bp.route('/predict', methods=['POST'])
@@ -26,7 +27,11 @@ def risk():
 def predict():
     data = request.form.to_dict()
     result = ml.risk_payload(data, data.get('model'))
-    session['last_result'] = result
+    pid = None
+    row = db.get_patient_by_code(data.get('patient_id') or '')
+    if row:
+        pid = row['id']
     return render_template('result.html',
                            result=result,
-                           patient=data.get('patient_name') or 'Current Patient')
+                           patient=data.get('patient_name') or 'Current Patient',
+                           pid=pid)

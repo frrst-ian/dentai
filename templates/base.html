@@ -1,1 +1,118 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DentAI Dental</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"></head><body><header><div class="brand">🦷 DentAI Dental</div><nav><a href="/dashboard">Dashboard</a><a href="/patients">Patients</a><a href="/appointments">Appointments</a><a href="/risk">Risk Assessment</a><a href="/reports">Reports</a></nav><div class="session">{% if session.get('name') %}<span class="session-user">{{ session['name'] }}{% if session.get('role') %} · {{ session['role'] }}{% endif %}</span><a class="session-logout" href="/logout">Sign out</a>{% endif %}</div></header><main>{% with messages=get_flashed_messages() %}{% if messages %}<div class="flash">{{ messages[0] }}</div>{% endif %}{% endwith %}{% block content %}{% endblock %}</main></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}DentAI Dental{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/tailwind.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='icons/phosphor.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='icons/phosphor-bold.css') }}">
+</head>
+<body class="bg-slate-100 text-slate-900 antialiased">
+{% set ep = request.endpoint or '' %}
+<div class="min-h-[100dvh] lg:grid lg:grid-cols-[16rem_1fr]">
+
+  <!-- Mobile overlay -->
+  <div id="sidebar-overlay" class="fixed inset-0 z-30 hidden bg-slate-950/40 backdrop-blur-[2px] lg:hidden"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar"
+    class="fixed inset-y-0 left-0 z-40 w-64 -translate-x-full transform bg-white border-r border-slate-200
+           transition-transform duration-200 ease-out lg:static lg:translate-x-0 lg:transition-none lg:min-h-[100dvh] lg:flex lg:flex-col">
+    <div class="flex h-16 items-center gap-3 px-5 border-b border-slate-100">
+      <span class="grid h-9 w-9 place-items-center rounded-lg bg-brand-700 text-white shadow-soft">
+        <i class="ph-bold ph-tooth text-[20px]"></i>
+      </span>
+      <div class="leading-tight">
+        <div class="text-[15px] font-semibold tracking-tight text-slate-900">DentAI Dental</div>
+        <div class="text-xs text-slate-400">Clinic workspace</div>
+      </div>
+    </div>
+
+    <nav class="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <a href="{{ url_for('admin.dashboard') }}"
+         class="sidebar-link {% if ep == 'admin.dashboard' %}sidebar-link-active{% endif %}">
+        <i class="ph ph-house text-lg"></i> Dashboard
+      </a>
+      <a href="{{ url_for('patients.patients') }}"
+         class="sidebar-link {% if ep.startswith('patients.') %}sidebar-link-active{% endif %}">
+        <i class="ph ph-users-three text-lg"></i> Patients
+      </a>
+      <a href="{{ url_for('admin.appointments') }}"
+         class="sidebar-link {% if ep == 'admin.appointments' or ep == 'admin.appointment_add' or ep == 'admin.appointment_status' %}sidebar-link-active{% endif %}">
+        <i class="ph ph-calendar-blank text-lg"></i> Appointments
+      </a>
+      <a href="{{ url_for('ai.risk') }}"
+         class="sidebar-link {% if ep == 'ai.risk' or ep == 'ai.patient_ai' or ep == 'ai.predict' %}sidebar-link-active{% endif %}">
+        <i class="ph ph-stethoscope text-lg"></i> Risk Assessment
+      </a>
+      <a href="{{ url_for('admin.reports') }}"
+         class="sidebar-link {% if ep == 'admin.reports' %}sidebar-link-active{% endif %}">
+        <i class="ph ph-chart-bar text-lg"></i> Reports
+      </a>
+      {% if session.get('role') == 'Administrator' %}
+      <a href="{{ url_for('admin.users') }}"
+         class="sidebar-link {% if ep == 'admin.users' %}sidebar-link-active{% endif %}">
+        <i class="ph ph-shield-check text-lg"></i> Users
+      </a>
+      {% endif %}
+    </nav>
+
+    <div class="border-t border-slate-100 px-4 py-4">
+      <div class="flex items-center gap-3">
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-100 text-brand-800 text-sm font-semibold">
+          {{ (session.get('name') or 'U')[0] }}
+        </span>
+        <div class="min-w-0">
+          <div class="truncate text-sm font-medium text-slate-800">{{ session.get('name') }}</div>
+          <div class="text-xs text-slate-400">{{ session.get('role') }}</div>
+        </div>
+        <form method="post" action="{{ url_for('auth.logout') }}" class="ml-auto">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-ghost btn-sm !text-slate-500" title="Sign out" aria-label="Sign out">
+            <i class="ph ph-sign-out text-lg"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main column -->
+  <div class="flex min-w-0 flex-col">
+    <header class="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-slate-100/90 px-4 backdrop-blur lg:hidden">
+      <button id="menu-toggle" class="btn btn-ghost btn-sm !text-slate-600" aria-label="Open menu">
+        <i class="ph ph-list text-xl"></i>
+      </button>
+      <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-700 text-white">
+        <i class="ph-bold ph-tooth text-[17px]"></i>
+      </span>
+      <span class="text-[15px] font-semibold tracking-tight">DentAI Dental</span>
+    </header>
+
+    <main class="mx-auto w-full max-w-[1240px] flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="mb-5 space-y-3">
+            {% for message in messages %}
+            <div class="card flex items-center gap-3 border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              <i class="ph-bold ph-check-circle text-emerald-600"></i>
+              <span class="flex-1">{{ message }}</span>
+              <button class="flash-dismiss btn btn-ghost btn-sm !text-emerald-700" aria-label="Dismiss">
+                <i class="ph ph-x text-lg"></i>
+              </button>
+            </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="px-4 pb-6 text-center text-xs text-slate-400">
+      DentAI Dental is an academic prototype. Not for clinical decisions.
+    </footer>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

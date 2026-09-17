@@ -1,1 +1,84 @@
-{% extends 'base.html' %}{% block content %}<h1>Reports & Analytics</h1><div class="panel"><h2>Periodontal Status</h2><table><tr><th>Status</th><th>Patients</th></tr>{% for k,v in counts.items() %}<tr><td>{{k}}</td><td>{{v}}</td></tr>{% endfor %}</table></div><div class="panel"><h2>Model Reference Metrics</h2><table><tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th></tr>{% for m in metrics %}<tr><td>{{m.model}}</td><td>{{m.accuracy}}%</td><td>{{m.precision}}%</td><td>{{m.recall}}%</td><td>{{m.f1}}%</td></tr>{% endfor %}</table></div>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Reports - DentAI Dental{% endblock %}
+{% block content %}
+{% set status_styles = {
+  'Healthy': 'bg-emerald-500',
+  'Mild': 'bg-amber-400',
+  'Moderate': 'bg-orange-500',
+  'Severe': 'bg-rose-500',
+} %}
+{% set order = ['Healthy', 'Mild', 'Moderate', 'Severe'] %}
+
+<div class="mb-6">
+  <h1 class="text-2xl font-semibold tracking-tight">Reports and analytics</h1>
+  <p class="mt-1 text-sm text-slate-500">Practice profile and model reference metrics.</p>
+</div>
+
+<div class="card overflow-hidden">
+  <div class="border-b border-slate-100 px-5 py-4">
+    <h2 class="text-[15px] font-semibold tracking-tight text-slate-900">Periodontal status</h2>
+    <p class="mt-0.5 text-[13px] text-slate-500">Current patient distribution.</p>
+  </div>
+  <div class="grid grid-cols-1 gap-6 px-5 py-5 lg:grid-cols-2">
+    <div class="space-y-3">
+      {% for s in order %}
+      {% set n = counts.get(s, 0) %}
+      <div>
+        <div class="mb-1 flex items-center justify-between text-[13px]">
+          <span class="font-medium text-slate-700">{{ s }}</span>
+          <span class="font-mono text-xs text-slate-500">{{ n }} patient{{ '' if n == 1 else 's' }}</span>
+        </div>
+        <div class="h-2.5 overflow-hidden rounded-full bg-slate-100">
+          <div class="h-full rounded-full {{ status_styles.get(s, 'bg-slate-400') }}"
+               style="width: {{ (n / count_max * 100) ~ '%' if n else '0%' }}"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      {% for s in order %}
+      {% set n = counts.get(s, 0) %}
+      <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+        <div class="flex items-center gap-2 text-xs font-medium text-slate-500">
+          <span class="h-2.5 w-2.5 rounded-full {{ status_styles.get(s, 'bg-slate-400') }}"></span>{{ s }}
+        </div>
+        <div class="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{{ n }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card mt-6 overflow-hidden">
+  <div class="border-b border-slate-100 px-5 py-4">
+    <h2 class="text-[15px] font-semibold tracking-tight text-slate-900">Model reference metrics</h2>
+    <p class="mt-0.5 text-[13px] text-slate-500">
+      Hold-out test set performance on synthetic training data. Not clinical validation.
+    </p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+          <th class="px-5 py-3 font-medium">Model</th>
+          <th class="px-5 py-3 font-medium">Accuracy</th>
+          <th class="px-5 py-3 font-medium">Precision</th>
+          <th class="px-5 py-3 font-medium">Recall</th>
+          <th class="px-5 py-3 font-medium">F1</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for m in metrics %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-5 py-3 font-medium text-slate-800">{{ m.model }}</td>
+          <td class="px-5 py-3 font-mono text-xs text-slate-600">{{ m.accuracy }}%</td>
+          <td class="px-5 py-3 font-mono text-xs text-slate-600">{{ m.precision }}%</td>
+          <td class="px-5 py-3 font-mono text-xs text-slate-600">{{ m.recall }}%</td>
+          <td class="px-5 py-3 font-mono text-xs text-slate-600">{{ m.f1 }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

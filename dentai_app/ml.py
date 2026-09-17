@@ -131,7 +131,14 @@ def risk_payload(data, model_name=None):
     used_name = name if name in ws['pipelines'] else config.DEFAULT_MODEL
     input_df = pd.DataFrame([_coerce_values(data)], columns=config.FEATURES)
     pred = pipe.predict(input_df)[0]
-    proba = float(pipe.predict_proba(input_df)[0][list(pipe.classes_).index(pred)])
+    classes = list(pipe.classes_)
+    probs = pipe.predict_proba(input_df)[0]
+    # Report the probability of the URGENT class, not of the predicted class:
+    # this is the number clinicians act on.
+    if 'Urgent' in classes:
+        urgent_prob = float(probs[classes.index('Urgent')])
+    else:
+        urgent_prob = float(probs[classes.index(pred)]) if pred == 'Urgent' else 1.0 - float(probs[classes.index(pred)])
     reasons = []
     if data.get('dental_pain') == 'Yes':
         reasons.append(('Dental pain', 'increases urgency signal'))
@@ -145,7 +152,7 @@ def risk_payload(data, model_name=None):
         reasons.append(('Poor oral hygiene', 'increases urgency signal'))
     if data.get('diabetes') == 'Yes':
         reasons.append(('Diabetes', 'included risk factor'))
-    return {'prediction': pred, 'probability': round(proba * 100, 1),
+    return {'prediction': pred, 'urgency': round(urgent_prob * 100, 1),
             'model': used_name, 'reasons': reasons[:5]}
 
 

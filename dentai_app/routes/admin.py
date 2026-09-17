@@ -30,11 +30,21 @@ def appointment_add():
     return redirect(url_for('admin.appointments'))
 
 
+@bp.route('/appointments/<int:aid>/status', methods=['POST'])
+@login_required
+@role_required('Dentist', 'Administrator')
+def appointment_status(aid):
+    if not db.update_appointment_status(aid, request.form.get('status')):
+        return 'Invalid status or appointment not found', 400
+    return redirect(url_for('admin.appointments'))
+
+
 @bp.route('/reports')
 @login_required
 def reports():
     counts = db.periodontal_counts()
-    return render_template('reports.html', metrics=ml.model_metrics(), counts=counts)
+    count_max = max(counts.values(), default=1) or 1
+    return render_template('reports.html', metrics=ml.model_metrics(), counts=counts, count_max=count_max)
 
 
 @bp.route('/users')

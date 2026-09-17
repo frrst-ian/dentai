@@ -31,7 +31,7 @@ def do_login():
     return redirect(url_for('admin.dashboard'))
 
 
-@bp.route('/logout')
+@bp.route('/logout', methods=['POST'])
 def logout():
     session.clear()
     return redirect(url_for('auth.login'))

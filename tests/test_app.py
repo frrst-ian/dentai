@@ -1,4 +1,5 @@
 import io
+import re
 
 import pytest
 
@@ -8,9 +9,30 @@ ADMIN = ('admin@dentalai.local', 'admin123')
 DENTIST = ('dentist@dentalai.local', 'dentist123')
 EVALUATOR = ('evaluator@dentalai.local', 'evaluator123')
 
+CSRF_RE = re.compile(rb'name="csrf_token" value="([^"]+)"')
+
+
+def get_csrf(client):
+    """Fetch a valid CSRF token for the current session (works pre/post login)."""
+    r = client.get('/', follow_redirects=True)
+    m = CSRF_RE.search(r.data)
+    assert m, 'no CSRF token found on page'
+    return m.group(1).decode()
+
+
+def post(client, path, data=None, **kwargs):
+    data = dict(data or {})
+    data.setdefault('csrf_token', get_csrf(client))
+    return client.post(path, data=data, **kwargs)
+
+
+def api_post(client, path, payload):
+    return client.post(path, json=payload, headers={'X-CSRF-Token': get_csrf(client)})
+
 
 def login(client, email, password):
-    return client.post('/login', data={'email': email, 'password': password})
+    token = get_csrf(client)
+    return client.post('/login', data={'email': email, 'password': password, 'csrf_token': token})
 
 
 @pytest.fixture()
@@ -19,17 +41,17 @@ def admin_client(client):
     return client
 
 
-def _create_patient(client):
-    client.post('/patients/new', data={
-        'patient_id': 'TEST-001', 'name': 'Test Patient', 'age': '30', 'sex': 'Male',
+def _create_patient(client, code='TEST-001', name='Test Patient'):
+    post(client, '/patients/new', data={
+        'patient_id': code, 'name': name, 'age': '30', 'sex': 'Male',
         'phone': '', 'address': '', 'smoking': 'No', 'diabetes': 'No', 'dental_pain': 'No',
         'bleeding_gums': 'No', 'caries_count': '1', 'missing_teeth': '0',
         'oral_hygiene': 'Good', 'periodontal_status': 'Healthy',
     })
     for row in db.list_patients():
-        if row['patient_id'] == 'TEST-001':
+        if row['patient_id'] == code:
             return row['id']
-    raise AssertionError('test patient not created')
+    raise AssertionError(f'patient {code} not created')
 
 
 # ---- auth ----
@@ -56,8 +78,27 @@ def test_dashboard_requires_login(client):
 
 def test_logout_clears_session(admin_client):
     assert admin_client.get('/dashboard').status_code == 200
-    admin_client.get('/logout')
+    post(admin_client, '/logout')
     assert admin_client.get('/dashboard').status_code == 302
+
+
+# ---- CSRF ----
+
+def test_csrf_reject_missing_token(client):
+    assert client.post('/login', data={'email': ADMIN[0], 'password': ADMIN[1]}).status_code == 403
+
+
+def test_csrf_reject_wrong_token(client):
+    client.get('/')
+    r = client.post('/login', data={
+        'email': ADMIN[0], 'password': ADMIN[1], 'csrf_token': 'not-a-real-token',
+    })
+    assert r.status_code == 403
+
+
+def test_csrf_reject_api(client):
+    r = client.post('/api/predict', json={'dental_pain': 'Yes'})
+    assert r.status_code == 403
 
 
 # ---- dashboard / patients ----
@@ -71,7 +112,7 @@ def test_dashboard(admin_client):
 def test_patients_page(admin_client):
     r = admin_client.get('/patients')
     assert r.status_code == 200
-    assert b'Patient Management' in r.data
+    assert b'Add patient' in r.data
 
 
 def test_create_patient(admin_client):
@@ -82,7 +123,7 @@ def test_create_patient(admin_client):
 def test_edit_patient(admin_client):
     pid = _create_patient(admin_client)
     assert admin_client.get(f'/patients/{pid}/edit').status_code == 200
-    r = admin_client.post(f'/patients/{pid}/edit', data={
+    r = post(admin_client, f'/patients/{pid}/edit', data={
         'name': 'Renamed Patient', 'age': '31', 'sex': 'Female', 'phone': '',
         'address': '', 'smoking': 'No', 'diabetes': 'No', 'dental_pain': 'Yes',
         'bleeding_gums': 'No', 'caries_count': '2', 'missing_teeth': '0',
@@ -94,7 +135,32 @@ def test_edit_patient(admin_client):
 
 def test_patient_new_denies_evaluator(client):
     login(client, *EVALUATOR)
-    assert client.post('/patients/new', data={'name': 'X'}).status_code == 403
+    assert post(client, '/patients/new', data={'name': 'X'}).status_code == 403
+
+
+def test_patient_delete_removes_records(admin_client):
+    pid = _create_patient(admin_client)
+    post(admin_client, f'/patients/{pid}/tooth/11', data={'status': 'Caries', 'notes': 'occlusal decay'})
+    assert db.list_tooth_records('TEST-001')
+    r = post(admin_client, f'/patients/{pid}/delete')
+    assert r.status_code == 302
+    assert db.get_patient(pid) is None
+    assert db.list_tooth_records('TEST-001') == []
+
+
+def test_patient_search(admin_client):
+    r = admin_client.get('/patients?q=Maria')
+    assert b'Maria Reyes' in r.data
+    assert b'Pedro Garcia' not in r.data
+
+
+def test_patient_pagination(admin_client):
+    for i in range(28):
+        _create_patient(admin_client, code=f'BULK-{i:03d}', name=f'Bulk Patient {i}')
+    r = admin_client.get('/patients')
+    assert b'Page 1 of' in r.data
+    r = admin_client.get('/patients?page=2')
+    assert b'Page 2 of' in r.data
 
 
 # ---- dental chart ----
@@ -103,34 +169,36 @@ def test_chart_page(admin_client):
     pid = _create_patient(admin_client)
     r = admin_client.get(f'/patients/{pid}/chart')
     assert r.status_code == 200
-    assert b'Dental Chart' in r.data
+    assert b'Dental chart' in r.data
 
 
 def test_save_tooth(admin_client):
     pid = _create_patient(admin_client)
-    r = admin_client.post(f'/patients/{pid}/tooth/11',
-                          data={'status': 'Caries', 'notes': 'occlusal decay'})
+    r = post(admin_client, f'/patients/{pid}/tooth/11',
+             data={'status': 'Caries', 'notes': 'occlusal decay'})
     assert r.status_code == 302
     records = db.list_tooth_records('TEST-001')
     assert any(x['tooth_no'] == '11' and x['status'] == 'Caries' for x in records)
+    page = admin_client.get(f'/patients/{pid}/chart')
+    assert 'Tooth 11: Caries' in page.get_data(as_text=True)
 
 
 def test_save_tooth_rejects_invalid_number(admin_client):
     pid = _create_patient(admin_client)
-    assert admin_client.post(f'/patients/{pid}/tooth/99',
-                             data={'status': 'Caries'}).status_code == 400
+    assert post(admin_client, f'/patients/{pid}/tooth/99',
+                data={'status': 'Caries'}).status_code == 400
 
 
 def test_save_tooth_denies_evaluator(client):
     login(client, *EVALUATOR)
     row = db.list_patients()[0]
-    assert client.post(f'/patients/{row["id"]}/tooth/11',
-                       data={'status': 'Caries'}).status_code == 403
+    assert post(client, f'/patients/{row["id"]}/tooth/11',
+                data={'status': 'Caries'}).status_code == 403
 
 
 def test_add_treatment_record(admin_client):
     pid = _create_patient(admin_client)
-    r = admin_client.post(f'/patients/{pid}/records', data={
+    r = post(admin_client, f'/patients/{pid}/records', data={
         'visit_date': '2026-09-17', 'procedure': 'Composite filling',
         'tooth_no': '12', 'dentist': 'Dr. Maria Santos', 'notes': '',
     })
@@ -152,15 +220,15 @@ def test_risk_page(admin_client):
 
 def test_predict(admin_client):
     _create_patient(admin_client)
-    r = admin_client.post('/predict', data={
+    r = post(admin_client, '/predict', data={
         'patient_id': 'TEST-001', 'patient_name': 'Test Patient', 'age': '30',
         'sex': 'Male', 'smoking': 'No', 'diabetes': 'No', 'dental_pain': 'Yes',
         'bleeding_gums': 'No', 'caries_count': '5', 'missing_teeth': '1',
         'oral_hygiene': 'Poor', 'periodontal_status': 'Severe', 'model': 'Random Forest',
     })
     assert r.status_code == 200
-    assert b'Prediction' in r.data
-    assert b'Probability' in r.data
+    assert b'Prediction result' in r.data
+    assert b'Likelihood of urgent care' in r.data
 
 
 # ---- appointments / reports / users ----
@@ -171,13 +239,32 @@ def test_appointments_page(admin_client):
 
 def test_add_appointment(admin_client):
     _create_patient(admin_client)
-    r = admin_client.post('/appointments/add', data={
+    r = post(admin_client, '/appointments/add', data={
         'patient_id': 'TEST-001', 'patient_name': 'Test Patient',
         'date': '2026-09-20', 'time': '09:00', 'dentist': 'Dr. Maria Santos',
         'purpose': 'Checkup',
     })
     assert r.status_code == 302
     assert len(db.list_appointments()) == 1
+
+
+def test_appointment_status_update(admin_client):
+    _create_patient(admin_client)
+    post(admin_client, '/appointments/add', data={
+        'patient_id': 'TEST-001', 'patient_name': 'Test Patient',
+        'date': '2026-09-20', 'time': '09:00', 'dentist': 'Dr. Maria Santos',
+        'purpose': 'Checkup',
+    })
+    appt = db.list_appointments()[0]
+    r = post(admin_client, f'/appointments/{appt["id"]}/status', data={'status': 'Completed'})
+    assert r.status_code == 302
+    assert db.list_appointments()[0]['status'] == 'Completed'
+
+
+def test_appointment_status_rejects_invalid(client):
+    login(client, *ADMIN)
+    r = post(client, '/appointments/1/status', data={'status': 'Nope'})
+    assert r.status_code in (302, 400)
 
 
 def test_reports(admin_client):
@@ -198,7 +285,7 @@ def test_users_denies_dentist(client):
 # ---- JSON API ----
 
 def test_api_predict(admin_client):
-    r = admin_client.post('/api/predict', json={
+    r = api_post(admin_client, '/api/predict', {
         'age': '45', 'sex': 'Female', 'smoking': 'Yes', 'diabetes': 'No',
         'dental_pain': 'Yes', 'bleeding_gums': 'Yes', 'caries_count': '6',
         'missing_teeth': '3', 'oral_hygiene': 'Poor', 'periodontal_status': 'Severe',
@@ -207,28 +294,29 @@ def test_api_predict(admin_client):
     body = r.get_json()
     assert body['prediction'] in ('Urgent', 'Non-Urgent')
     assert body['model'] in ('Random Forest', 'Logistic Regression')
+    assert 0 <= body['urgency'] <= 100
 
 
 def test_api_predict_partial_payload(admin_client):
-    r = admin_client.post('/api/predict', json={'dental_pain': 'Yes'})
+    r = api_post(admin_client, '/api/predict', {'dental_pain': 'Yes'})
     assert r.status_code == 200
     assert r.get_json()['prediction'] in ('Urgent', 'Non-Urgent')
 
 
 def test_import_csv(admin_client):
     csv_data = b'patient_id,name,age,sex\nCSV-001,Imported Patient,40,Male\n'
-    r = admin_client.post('/api/import_csv',
-                          data={'file': (io.BytesIO(csv_data), 'patients.csv')},
-                          content_type='multipart/form-data')
+    r = post(admin_client, '/api/import_csv',
+             data={'file': (io.BytesIO(csv_data), 'patients.csv')},
+             content_type='multipart/form-data')
     assert r.status_code == 200
     assert r.get_json() == {'imported': 1}
 
     r = admin_client.post('/api/import_csv')
-    assert r.status_code == 400
+    assert r.status_code == 403  # missing CSRF token
 
 
 def test_import_csv_denies_evaluator(client):
     login(client, *EVALUATOR)
-    r = client.post('/api/import_csv', data={'file': (io.BytesIO(b''), 'x.csv')},
-                    content_type='multipart/form-data')
+    r = post(client, '/api/import_csv', data={'file': (io.BytesIO(b''), 'x.csv')},
+             content_type='multipart/form-data')
     assert r.status_code == 403

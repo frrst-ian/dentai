@@ -1,0 +1,342 @@
+@import "tailwindcss";
+
+/*
+  DentAI Dental - design tokens
+  Clinical teal system on a slate base. One family per project:
+  Geist Variable for UI + Phosphor icons. Light theme only (clinical
+  clarity), locked across the whole app.
+*/
+
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono",
+    Menlo, Consolas, monospace;
+
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+  --color-brand-950: #042f2e;
+
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px -2px rgb(15 23 42 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.05), 0 12px 28px -8px rgb(15 23 42 / 0.14);
+}
+
+/* Fonts ------------------------------------------------------------------ */
+
+@font-face {
+  font-family: "Geist Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/static/fonts/geist-latin-wght-normal.woff2") format("woff2-variations");
+}
+@font-face {
+  font-family: "Geist Variable";
+  font-style: italic;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("/static/fonts/geist-latin-wght-italic.woff2") format("woff2-variations");
+}
+
+/* Base -------------------------------------------------------------------- */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-color: var(--color-slate-100);
+  color: var(--color-slate-900);
+}
+
+::selection {
+  background-color: var(--color-brand-200);
+  color: var(--color-brand-950);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm
+      font-medium leading-5 no-underline shadow-soft cursor-pointer select-none
+      whitespace-nowrap border border-transparent;
+  }
+  .btn:active {
+    transform: translateY(1px);
+  }
+  .btn-primary {
+    @apply bg-brand-700 text-white hover:bg-brand-800;
+  }
+  .btn-secondary {
+    @apply bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:text-slate-900
+      shadow-none;
+  }
+  .btn-ghost {
+    @apply bg-transparent text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 shadow-none
+      border-transparent;
+  }
+  .btn-danger {
+    @apply bg-white text-rose-700 border-rose-200 hover:bg-rose-50 hover:border-rose-300
+      shadow-none;
+  }
+  .btn-sm {
+    @apply px-2.5 py-1.5 text-[13px] leading-4 rounded-md;
+  }
+
+  .card {
+    @apply rounded-xl bg-white shadow-soft border border-slate-200/70;
+  }
+
+  .label {
+    @apply block text-[13px] font-medium tracking-tight text-slate-700 mb-1.5;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm
+      placeholder-slate-400 shadow-none focus:border-brand-500
+      focus:ring-2 focus:ring-brand-500/20 focus:outline-none;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium
+      text-slate-600 no-underline hover:bg-slate-200/70 hover:text-slate-900;
+  }
+  .sidebar-link-active {
+    @apply bg-brand-700 text-white hover:bg-brand-700 hover:text-white
+      shadow-soft;
+  }
+}
+
+/* FDI tooth chart ------------------------------------------------------------ */
+
+@keyframes tooth-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.55);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tooth-cell {
+    animation: tooth-pop 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 16ms + 80ms);
+  }
+}
+
+.tooth-cell {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: 50px;
+  padding: 7px 6px 6px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgb(15 23 42 / 0.08);
+  color: var(--tc, var(--color-brand-700));
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.2s ease, background-color 0.2s ease;
+}
+.tooth-cell--upper {
+  flex-direction: column-reverse;
+  padding-top: 6px;
+  padding-bottom: 8px;
+}
+
+.tooth-cell--interactive:hover {
+  transform: translateY(-3px) scale(1.06);
+  z-index: 1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tc, #0f766e) 20%, transparent),
+    0 14px 24px -10px color-mix(in srgb, var(--tc, #0f766e) 50%, transparent);
+  border-color: color-mix(in srgb, var(--tc, #0f766e) 45%, rgb(15 23 42 / 0.1));
+  background-color: #fbfdfd;
+}
+.tooth-cell--interactive:active {
+  transform: translateY(0) scale(0.94);
+}
+
+.tooth-cell.is-lit {
+  border-color: color-mix(in srgb, var(--tc, #0f766e) 55%, rgb(15 23 42 / 0.15));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc, #0f766e) 30%, transparent);
+}
+
+/* Absent teeth render as a dashed socket */
+.tooth-cell--absent {
+  background: #f8fafc;
+  border-style: dashed;
+  border-color: rgb(15 23 42 / 0.16);
+  opacity: 0.92;
+}
+.tooth-cell--absent .tooth-glyph {
+  color: var(--color-slate-300);
+}
+.tooth-cell--extracted {
+  opacity: 0.72;
+}
+.tooth-cell--extracted .tooth-no {
+  color: var(--color-slate-400);
+  text-decoration: line-through;
+}
+
+.tooth-glyph {
+  display: inline-block;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--tc, var(--color-brand-700));
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tooth-glyph--flip {
+  transform: scaleY(-1);
+}
+.tooth-cell--interactive:hover .tooth-glyph {
+  transform: scale(1.1);
+}
+.tooth-cell--interactive:hover .tooth-glyph--flip {
+  transform: scaleY(-1) scale(1.1);
+}
+
+.tooth-no {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--color-slate-600);
+  transition: color 0.2s ease;
+}
+
+/* Legend chips ---------------------------------------------------------------- */
+
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgb(15 23 42 / 0.1);
+  background: #fff;
+  box-shadow: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-slate-700);
+  cursor: default;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.legend-chip:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--tc, #0f766e) 50%, rgb(15 23 42 / 0.1));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tc, #0f766e) 18%, transparent);
+}
+.legend-chip .dot,
+.status-option .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--tc, var(--color-brand-500));
+  flex-shrink: 0;
+}
+.legend-chip--absent .dot {
+  background: transparent;
+  border: 1.5px dashed var(--color-slate-400);
+}
+.legend-chip .count {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--color-slate-400);
+}
+
+/* Status picker (modal) ------------------------------------------------------- */
+
+.status-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgb(15 23 42 / 0.12);
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-slate-700);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.15s ease;
+}
+.status-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.status-option:hover {
+  border-color: color-mix(in srgb, var(--tc, #0f766e) 45%, rgb(15 23 42 / 0.15));
+  color: var(--color-slate-900);
+}
+.status-option:has(input:checked) {
+  border-color: var(--tc, var(--color-brand-600));
+  box-shadow: inset 0 0 0 1px var(--tc, var(--color-brand-600)),
+    0 0 0 3px color-mix(in srgb, var(--tc, #0f766e) 14%, transparent);
+  background-color: color-mix(in srgb, var(--tc, #0f766e) 6%, #fff);
+  color: var(--color-slate-900);
+}
+
+/* Modal entrance ------------------------------------------------------------------ */
+
+.tooth-modal-panel {
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+  transition: opacity 0.18s ease, transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tooth-modal.is-open .tooth-modal-panel {
+  opacity: 1;
+  transform: none;
+}
+
+/* Reduced motion: collapse transitions to an instant state ------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .tooth-cell {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

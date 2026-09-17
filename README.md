@@ -6,13 +6,14 @@ component uses synthetic training data, and sample patients are not real records
 
 ## Features
 
-- Login / logout with role-based access (Dentist, Administrator, Evaluator)
+- Login / logout (POST-only) with role-based access (Dentist, Administrator, Evaluator)
 - Dashboard with live stats and recent patients
-- Patient management (add / edit / CSV import)
+- Patient management (add / edit / search / paginated list / delete / CSV import)
 - Interactive FDI dental chart (teeth 11–48) with 9 tooth statuses
 - Treatment / clinical record history per patient
-- AI treatment-urgency prediction (5 sklearn models) with signals breakdown
-- Appointments, Reports & Analytics, User management
+- AI treatment-urgency prediction (5 sklearn models) with signals breakdown and a linked risk-assessment page
+- Appointments with inline status updates, Reports & Analytics, User management
+- CSRF protection on all state-changing requests
 - JSON API: `POST /api/predict`, `POST /api/import_csv`
 
 ## Demo accounts
@@ -33,6 +34,8 @@ Administrator-only.
 python -m venv venv
 . venv/bin/activate            # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+npm install                    # Tailwind v4 CLI + vendored fonts/icons
+npm run build                  # compile static/dist/tailwind.css
 python app.py
 ```
 
@@ -45,7 +48,8 @@ are cached to `models/` (joblib), so startup stays fast.
 Configuration via environment variables:
 
 - `DENTAI_DB` — database path
-- `DENTAI_SECRET` — Flask secret key (set this outside development)
+- `DENTAI_SECRET` — Flask secret key; if unset, a key is auto-generated and persisted
+  to `.secret_key` in the project root (chmod 600) on first start
 
 Set a strong `DENTAI_SECRET` before any non-demo deployment.
 
@@ -62,8 +66,8 @@ dentai_app/           Application package
   auth.py             login_required / role_required decorators
   routes/             Blueprints: auth, patients, chart, ai, admin, api
 templates/            Jinja2 templates
-static/               CSS
-tests/                pytest smoke suite (26 tests, incl. role + FK checks)
+static/               Tailwind v4 source (static/src) + compiled CSS, fonts, icons
+tests/                pytest smoke suite (35 tests, incl. CSRF, roles, FK checks)
 ```
 
 ## Tests
@@ -75,11 +79,24 @@ python -m pytest tests/
 
 ## API examples
 
+Every state-changing endpoint requires a valid CSRF token. For the JSON API that
+means an `X-CSRF-Token` header plus a logged-in session cookie: first GET `/` (or any
+page) to obtain a `csrf_token` value and a session cookie, then use both:
+
 ```bash
+# 1. Obtain a token + session cookie (any logged-in page works)
+curl -c cookies.txt http://127.0.0.1:5000/login -o login.html
+#    extract value="<token>" from login.html (field name="csrf_token")
+
+# 2. JSON API with the token header
 curl -X POST http://127.0.0.1:5000/api/predict \
+  -b cookies.txt \
   -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: <token>" \
   -d '{"age":45,"sex":"Female","smoking":"Yes","dental_pain":"Yes","caries_count":6,"periodontal_status":"Severe"}'
 
 curl -X POST http://127.0.0.1:5000/api/import_csv \
+  -b cookies.txt \
+  -H "X-CSRF-Token: <token>" \
   -F "file=@patients.csv"
 ```

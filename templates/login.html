@@ -1,1 +1,101 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login – DentAI</title><link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}"></head><body class="login"><div class="login-card"><h1>🦷 DentAI Dental</h1><p>Integrated Dental Patient Management System</p>{% with messages=get_flashed_messages() %}{% if messages %}<div class="flash">{{ messages[0] }}</div>{% endif %}{% endwith %}<form method="post" action="/login"><input type="email" name="email" placeholder="Email" autocomplete="username" required><input type="password" name="password" placeholder="Password" autocomplete="current-password" required><button>Sign in</button></form><p class="muted">Demo: admin@dentalai.local / admin123</p><p class="muted">dentist@dentalai.local / dentist123 · evaluator@dentalai.local / evaluator123</p></div></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in - DentAI Dental</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dist/tailwind.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='icons/phosphor.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='icons/phosphor-bold.css') }}">
+</head>
+<body class="bg-slate-100 text-slate-900 antialiased">
+<div class="grid min-h-[100dvh] lg:grid-cols-2">
+
+  <section class="relative hidden flex-col justify-between overflow-hidden bg-brand-900 p-10 text-white lg:flex">
+    <div class="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-brand-500/20 blur-2xl"></div>
+    <div class="pointer-events-none absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-teal-400/10 blur-3xl"></div>
+
+    <div class="relative flex items-center gap-3">
+      <span class="grid h-10 w-10 place-items-center rounded-xl bg-white text-brand-800 shadow-soft">
+        <i class="ph-bold ph-tooth text-[22px]"></i>
+      </span>
+      <div class="leading-tight">
+        <div class="text-lg font-semibold tracking-tight">DentAI Dental</div>
+        <div class="text-[13px] text-brand-200">Clinic workspace</div>
+      </div>
+    </div>
+
+    <div class="relative max-w-md">
+      <h1 class="text-3xl font-semibold leading-tight tracking-tight">
+        Integrated dental patient management with treatment-urgency prediction.
+      </h1>
+      <p class="mt-4 text-[15px] leading-relaxed text-brand-100">
+        Patient records, an interactive FDI dental chart, clinical history,
+        appointments and role-based access for your clinic team.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-2">
+        <span class="badge bg-white/10 text-brand-50">Role-based access</span>
+        <span class="badge bg-white/10 text-brand-50">FDI chart</span>
+        <span class="badge bg-white/10 text-brand-50">AI risk scoring</span>
+      </div>
+    </div>
+
+    <p class="relative text-[13px] text-brand-200">
+      Academic prototype. Not for real clinical decisions.
+    </p>
+  </section>
+
+  <main class="flex items-center justify-center px-4 py-10">
+    <div class="w-full max-w-sm">
+      <div class="mb-8 flex items-center gap-3 lg:hidden">
+        <span class="grid h-10 w-10 place-items-center rounded-xl bg-brand-700 text-white shadow-soft">
+          <i class="ph-bold ph-tooth text-[22px]"></i>
+        </span>
+        <div class="leading-tight">
+          <div class="text-lg font-semibold tracking-tight text-slate-900">DentAI Dental</div>
+          <div class="text-[13px] text-slate-500">Clinic workspace</div>
+        </div>
+      </div>
+
+      <h2 class="text-2xl font-semibold tracking-tight text-slate-900">Sign in</h2>
+      <p class="mt-1 text-sm text-slate-500">Use your clinic account to continue.</p>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="mt-5 flex items-center gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <i class="ph-bold ph-warning text-rose-600"></i>
+            <span>{{ messages[0] }}</span>
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="post" action="{{ url_for('auth.do_login') }}" class="mt-6 space-y-4">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div>
+          <label class="label" for="email">Email</label>
+          <input class="input" id="email" name="email" type="email" placeholder="you@clinic.local"
+            autocomplete="username" required>
+        </div>
+        <div>
+          <label class="label" for="password">Password</label>
+          <input class="input" id="password" name="password" type="password" placeholder="Your password"
+            autocomplete="current-password" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-full !py-2.5">
+          Sign in <i class="ph-bold ph-arrow-right"></i>
+        </button>
+      </form>
+
+      <div class="mt-6 rounded-xl border border-slate-200 bg-white p-4 text-[13px] text-slate-600">
+        <div class="mb-2 font-medium text-slate-800">Demo accounts</div>
+        <div class="space-y-1 font-mono text-xs">
+          <div>admin@dentalai.local - admin123</div>
+          <div>dentist@dentalai.local - dentist123</div>
+          <div>evaluator@dentalai.local - evaluator123</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

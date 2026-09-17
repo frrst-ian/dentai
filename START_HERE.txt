@@ -1,11 +1,13 @@
 DentAI Dental - Complete Package
 ================================
 QUICK START
-1. Install Python 3.10 or newer.
+1. Install Python 3.10 or newer, and Node.js 18 or newer (for the Tailwind build).
 2. Create a venv and install dependencies:
      python -m venv venv
      venv\Scripts\activate          (Linux/macOS: source venv/bin/activate)
      pip install -r requirements.txt
+     npm install
+     npm run build                  (compile static/src -> static/dist/tailwind.css)
 3. Run: python app.py   (or double-click run.bat on Windows)
 4. Open http://127.0.0.1:5000
 
@@ -20,20 +22,21 @@ ROLES
 - /users page is Administrator-only.
 
 MODULES
-- Login / logout
+- Login / logout (POST only)
 - Dashboard
-- Patient Management + Add/Edit
+- Patient Management + Add/Edit, Search, Pagination, Delete
 - Dental Chart & Clinical Records (FDI 11-48)
 - Tooth status, notes, and treatment/visit history
 - Dental Risk Assessment + AI Prediction Result
-- Appointments / Reports & Analytics / User Management
-- CSV import API
-- JSON prediction API
+- Appointments (incl. inline status updates) / Reports & Analytics / User Management
+- CSV import API   (requires CSRF header - see README)
+- JSON prediction API   (requires CSRF header - see README)
 
 NOTES
 - On first run the app creates/migrates dental_ai.db and seeds sample data.
 - ML models train lazily on the first prediction; results are cached in models/.
-- Set the DENTAI_SECRET env var outside development.
+- Set the DENTAI_SECRET env var outside development. If unset, a key is
+  auto-generated into .secret_key on first start.
 
 IMPORTANT
 Academic/demo prototype only. The ML component uses synthetic training data.
