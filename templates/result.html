@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<h1>AI Prediction Result</h1><div class="panel"><h2>{{patient}}</h2><p><b>Prediction:</b> {{result.prediction}}</p><p><b>Probability:</b> {{result.probability}}%</p><p><b>Model:</b> {{result.model}}</p><h3>Signals</h3><ul>{% for a,b in result.reasons %}<li>{{a}} — {{b}}</li>{% endfor %}</ul></div>{% endblock %}

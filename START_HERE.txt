@@ -1,0 +1,27 @@
+DentAI Dental - Complete Package
+================================
+WINDOWS QUICK START
+1. Install Python 3.10 or newer.
+2. Double-click run.bat.
+3. Wait for installation.
+4. Open http://127.0.0.1:5000
+
+MODULES
+- Login / Guest access
+- Dashboard
+- Patient Management + Add/Edit
+- Dental Chart & Clinical Records (FDI 11-48)
+- Tooth status, notes, and treatment/visit history
+- Dental Risk Assessment + AI Prediction Result
+- Appointments
+- Reports & Analytics
+- User Management
+- CSV import API
+
+DEMO ACCOUNTS
+admin@dentalai.local
+dentist@dentalai.local
+evaluator@dentalai.local
+
+IMPORTANT
+Academic/demo prototype only. The ML component uses synthetic training data. Sample patient/chart data are not real clinical records. Do not use for real clinical decisions without proper validation, security, authorization, and clinical oversight.
