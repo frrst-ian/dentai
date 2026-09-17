@@ -1,1 +1,324 @@
-{% extends 'base.html' %}{% block content %}<div class="row"><div><h1>Patient: {{ patient.name }}</h1><p class="muted">{{ patient.patient_id }} · {{ patient.age }} years · {{ patient.sex }}</p></div><a class="btn secondary" href="/patients">← Back to Patients</a></div><div class="patient-actions"><a class="btn" href="#chart">🦷 Dental Chart</a><a class="btn records" href="#records">📋 Clinical Records</a><a class="btn ai" href="/patients/{{patient.id}}/ai">🤖 AI Prediction</a></div><div class="profile-grid"><section class="panel"><h2>Patient Clinical Summary</h2><div class="summary"><div><b>Dental Pain</b><span>{{patient.dental_pain}}</span></div><div><b>Bleeding Gums</b><span>{{patient.bleeding_gums}}</span></div><div><b>Caries</b><span>{{patient.caries_count}}</span></div><div><b>Missing Teeth</b><span>{{patient.missing_teeth}}</span></div><div><b>Oral Hygiene</b><span>{{patient.oral_hygiene}}</span></div><div><b>Periodontal</b><span>{{patient.periodontal_status}}</span></div></div></section><section class="panel"><h2>Dental Chart Legend</h2><div class="legend">{% for s in statuses %}<span class="legend-item"><i class="dot {{s|lower|replace(' ','-')}}"></i>{{s}}</span>{% endfor %}</div></section></div><section class="panel" id="chart"><div class="row"><h2>Interactive FDI Dental Chart</h2><span class="muted">Click a tooth to edit its condition and notes.</span></div><div class="mouth"><div class="jaw"><h3>Upper Right → Upper Left</h3><div class="teeth">{% for t in upper %}{% set r=tooth_map.get(t) %}<button class="tooth {{ (r.status if r else 'Healthy')|lower|replace(' ','-') }}" onclick="openTooth('{{t}}','{{r.status if r else 'Healthy'}}','{{(r.notes if r else '')|replace("'","\\'")}}')"><span>{{t}}</span><strong>🦷</strong></button>{% endfor %}</div></div><div class="jaw"><h3>Lower Right → Lower Left</h3><div class="teeth">{% for t in lower %}{% set r=tooth_map.get(t) %}<button class="tooth {{ (r.status if r else 'Healthy')|lower|replace(' ','-') }}" onclick="openTooth('{{t}}','{{r.status if r else 'Healthy'}}','{{(r.notes if r else '')|replace("'","\\'")}}')"><span>{{t}}</span><strong>🦷</strong></button>{% endfor %}</div></div></div></section><section class="panel" id="records"><h2>📋 Clinical / Treatment Records</h2><form method="post" action="/patients/{{patient.id}}/records" class="record-form"><input name="visit_date" type="date" required><input name="procedure" placeholder="Procedure / Treatment" required><input name="dentist" placeholder="Dentist"><select name="tooth_no"><option value="">Tooth no. (optional)</option>{% for t in all_teeth %}<option>{{t}}</option>{% endfor %}</select><textarea name="notes" placeholder="Clinical notes / findings"></textarea><button>Add Record</button></form><table><tr><th>Date</th><th>Procedure</th><th>Tooth</th><th>Dentist</th><th>Notes</th></tr>{% for r in records %}<tr><td>{{r.visit_date}}</td><td>{{r.procedure}}</td><td>{{r.tooth_no or '—'}}</td><td>{{r.dentist or '—'}}</td><td>{{r.notes or '—'}}</td></tr>{% else %}<tr><td colspan="5" class="muted">No treatment records yet.</td></tr>{% endfor %}</table></section><div id="modal" class="modal"><div class="modal-box"><button class="close" onclick="closeTooth()">×</button><h2>Tooth <span id="toothNo"></span></h2><form id="toothForm" method="post"><label>Status<select name="status" id="toothStatus">{% for s in statuses %}<option>{{s}}</option>{% endfor %}</select></label><label>Notes<textarea name="notes" id="toothNotes" placeholder="Condition, restoration, treatment notes..."></textarea></label><button>Save Tooth Record</button></form></div></div><script>function openTooth(no,status,notes){document.getElementById('modal').style.display='flex';document.getElementById('toothNo').textContent=no;document.getElementById('toothStatus').value=status;document.getElementById('toothNotes').value=notes;document.getElementById('toothForm').action='/patients/{{patient.id}}/tooth/'+no;}function closeTooth(){document.getElementById('modal').style.display='none';}</script>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Dental chart - {{ patient.name }} - DentAI Dental{% endblock %}
+{% block content %}
+{% set is_writer = session.get('role') in ('Dentist', 'Administrator') %}
+{% set tcolors = {
+  'Healthy': '#10b981',
+  'Caries': '#e11d48',
+  'Filled': '#0284c7',
+  'Missing': '#94a3b8',
+  'Extracted': '#64748b',
+  'Root Canal': '#7c3aed',
+  'Crown': '#d97706',
+  'Implant': '#0d9488',
+  'Impacted': '#ea580c',
+} %}
+{% set legend_order = ['Healthy', 'Caries', 'Filled', 'Root Canal', 'Crown', 'Implant', 'Impacted', 'Missing', 'Extracted'] %}
+{% set upper_l = upper[:8] | reverse | list %}
+{% set upper_r = upper[8:] %}
+{% set lower_l = lower[:8] | reverse | list %}
+{% set lower_r = lower[8:] %}
+
+{% macro tooth_cell(t, st, notes, is_writer, upper, idx) %}
+  {% set absent = st in ('Missing', 'Extracted') %}
+  <button type="button"
+    data-status="{{ st }}" data-tooth="{{ t }}"
+    class="tooth-cell {{ 'tooth-cell--upper' if upper }} {{ 'tooth-cell--interactive' if is_writer }} {{ 'tooth-cell--absent' if absent }} {{ 'tooth-cell--extracted' if st == 'Extracted' }}"
+    style="--tc: {{ tcolors[st] }}; --i: {{ idx }};"
+    title="Tooth {{ t }}: {{ st }}"
+    aria-label="Tooth {{ t }}, {{ st }}"
+    {% if is_writer %}onclick="openTooth('{{ t }}', '{{ st }}', {{ (notes or '')|tojson }})"{% endif %}>
+    <i class="ph-bold ph-tooth tooth-glyph {{ 'tooth-glyph--flip' if upper }}" aria-hidden="true"></i>
+    <span class="tooth-no">{{ t }}</span>
+  </button>
+{% endmacro %}
+
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-semibold tracking-tight">{{ patient.name }}</h1>
+    <p class="mt-1 text-sm text-slate-500">
+      {{ patient.patient_id }} - {{ patient.age }} years - {{ patient.sex }}
+    </p>
+  </div>
+  <a href="{{ url_for('patients.patients') }}" class="btn btn-secondary">
+    <i class="ph ph-arrow-left"></i> Back to patients
+  </a>
+</div>
+
+<div class="mb-6 flex flex-wrap gap-2">
+  <a href="#chart" class="btn btn-primary">
+    <i class="ph-bold ph-tooth"></i> Dental chart
+  </a>
+  <a href="#records" class="btn btn-secondary">
+    <i class="ph-bold ph-clipboard-text"></i> Clinical records
+  </a>
+  <a href="{{ url_for('ai.patient_ai', pid=patient.id) }}" class="btn btn-secondary">
+    <i class="ph-bold ph-stethoscope"></i> AI prediction
+  </a>
+</div>
+
+<section class="card overflow-hidden">
+  <div class="border-b border-slate-100 px-5 py-4">
+    <h2 class="text-[15px] font-semibold tracking-tight text-slate-900">Patient clinical summary</h2>
+  </div>
+  <div class="grid grid-cols-2 gap-px bg-slate-100 sm:grid-cols-3 lg:grid-cols-6">
+    {% for label, value in [('Dental pain', patient.dental_pain), ('Bleeding gums', patient.bleeding_gums),
+                            ('Caries', patient.caries_count), ('Missing teeth', patient.missing_teeth),
+                            ('Oral hygiene', patient.oral_hygiene), ('Periodontal', patient.periodontal_status)] %}
+    <div class="bg-white px-4 py-3">
+      <div class="text-xs font-medium uppercase tracking-wide text-slate-400">{{ label }}</div>
+      <div class="mt-0.5 text-[15px] font-semibold text-slate-800">{{ value }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card mt-6" id="chart">
+  <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+    <div>
+      <h2 class="text-[15px] font-semibold tracking-tight text-slate-900">Interactive FDI dental chart</h2>
+      <p class="mt-0.5 text-[13px] text-slate-500">
+        {{ 'Click a tooth to set its condition. Hover the legend to highlight matches.' if is_writer else 'Read-only view.' }}
+      </p>
+    </div>
+    {% if flagged %}
+    <span class="badge bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200">{{ flagged }} issue{{ 's' if flagged != 1 }} flagged</span>
+    {% else %}
+    <span class="badge bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200">No issues flagged</span>
+    {% endif %}
+  </div>
+
+  <div class="px-4 py-6 sm:px-6">
+    <div class="mb-6 flex flex-wrap items-center gap-2 border-b border-slate-100 pb-5" role="list" aria-label="Tooth status legend">
+      {% for s in legend_order %}
+      <button type="button" class="legend-chip {{ 'legend-chip--absent' if s in ('Missing', 'Extracted') }}" data-status="{{ s }}" style="--tc: {{ tcolors[s] }}" title="Highlight tooth {{ s|lower }} on the chart">
+        <span class="dot" aria-hidden="true"></span>
+        <span>{{ s }}</span>
+        <span class="count">{{ counts[s] }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    <div class="mx-auto w-fit max-w-full overflow-x-auto px-2 pb-2 pt-1">
+      <div class="flex w-max flex-col">
+        <div class="flex items-start gap-0">
+          <div class="flex flex-col items-center gap-1.5">
+            <div class="flex w-max gap-[6px]">
+              {%- for t in upper_l %}
+              {{ tooth_cell(t, tooth_map.get(t).status if t in tooth_map else 'Healthy',
+                            tooth_map.get(t).notes if t in tooth_map and tooth_map.get(t).notes else None, is_writer, True, loop.index0) }}
+              {%- endfor %}
+            </div>
+            <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">Quadrant 1</span>
+          </div>
+          <span class="mx-1 mt-1 h-12 w-px self-start bg-slate-200" aria-hidden="true"></span>
+          <div class="flex flex-col items-center gap-1.5">
+            <div class="flex w-max gap-[6px]">
+              {%- for t in upper_r %}
+              {{ tooth_cell(t, tooth_map.get(t).status if t in tooth_map else 'Healthy',
+                            tooth_map.get(t).notes if t in tooth_map and tooth_map.get(t).notes else None, is_writer, True, 8 + loop.index0) }}
+              {%- endfor %}
+            </div>
+            <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">Quadrant 2</span>
+          </div>
+        </div>
+
+        <div class="my-5 h-px w-full border-t border-dashed border-slate-300" aria-hidden="true"></div>
+
+        <div class="flex items-start gap-0">
+          <div class="flex flex-col items-center gap-1.5">
+            <div class="flex w-max gap-[6px]">
+              {%- for t in lower_l %}
+              {{ tooth_cell(t, tooth_map.get(t).status if t in tooth_map else 'Healthy',
+                            tooth_map.get(t).notes if t in tooth_map and tooth_map.get(t).notes else None, is_writer, False, 16 + loop.index0) }}
+              {%- endfor %}
+            </div>
+            <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">Quadrant 4</span>
+          </div>
+          <span class="mx-1 mt-1 h-12 w-px self-start bg-slate-200" aria-hidden="true"></span>
+          <div class="flex flex-col items-center gap-1.5">
+            <div class="flex w-max gap-[6px]">
+              {%- for t in lower_r %}
+              {{ tooth_cell(t, tooth_map.get(t).status if t in tooth_map else 'Healthy',
+                            tooth_map.get(t).notes if t in tooth_map and tooth_map.get(t).notes else None, is_writer, False, 24 + loop.index0) }}
+              {%- endfor %}
+            </div>
+            <span class="font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400">Quadrant 3</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="card mt-6" id="records">
+  <div class="border-b border-slate-100 px-5 py-4">
+    <h2 class="text-[15px] font-semibold tracking-tight text-slate-900">Clinical records</h2>
+  </div>
+
+  {% if is_writer %}
+  <form method="post" action="{{ url_for('chart.add_treatment_record', pid=patient.id) }}" class="grid grid-cols-1 gap-x-4 gap-y-3 border-b border-slate-100 px-5 py-4 sm:grid-cols-3 lg:grid-cols-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <label class="label" for="visit_date">Visit date</label>
+      <input class="input" id="visit_date" name="visit_date" type="date" required>
+    </div>
+    <div class="sm:col-span-2 lg:col-span-2">
+      <label class="label" for="procedure">Procedure</label>
+      <input class="input" id="procedure" name="procedure" placeholder="e.g. Composite filling" required>
+    </div>
+    <div>
+      <label class="label" for="tooth_no">Tooth</label>
+      <input class="input" id="tooth_no" name="tooth_no" placeholder="e.g. 12">
+    </div>
+    <div>
+      <label class="label" for="dentist">Dentist</label>
+      <input class="input" id="dentist" name="dentist" placeholder="Name">
+    </div>
+    <div class="flex items-end">
+      <button type="submit" class="btn btn-primary w-full">
+        <i class="ph-bold ph-plus"></i> Add
+      </button>
+    </div>
+  </form>
+  {% endif %}
+
+  <div class="overflow-x-auto">
+    {% if records %}
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+          <th class="px-5 py-3 font-medium">Date</th>
+          <th class="px-5 py-3 font-medium">Procedure</th>
+          <th class="px-5 py-3 font-medium">Tooth</th>
+          <th class="px-5 py-3 font-medium">Dentist</th>
+          <th class="px-5 py-3 font-medium">Notes</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for r in records %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-5 py-3 whitespace-nowrap text-slate-600">{{ r.visit_date }}</td>
+          <td class="px-5 py-3 font-medium text-slate-800">{{ r.procedure }}</td>
+          <td class="px-5 py-3 font-mono text-xs text-slate-500">{{ r.tooth_no or '-' }}</td>
+          <td class="px-5 py-3 text-slate-600">{{ r.dentist or '-' }}</td>
+          <td class="px-5 py-3 text-slate-500">{{ r.notes or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="px-5 py-10 text-center text-sm text-slate-500">
+      No treatment records for this patient yet.
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{% if is_writer %}
+<div id="tooth-modal" class="tooth-modal hidden fixed inset-0 z-50 items-center justify-center p-4">
+  <div class="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]" onclick="closeTooth()"></div>
+  <div class="tooth-modal-panel relative w-full max-w-md rounded-xl bg-white p-6 shadow-lift" role="dialog" aria-modal="true" aria-labelledby="tooth-modal-title">
+    <div class="mb-4 flex items-start justify-between gap-3">
+      <div>
+        <h3 id="tooth-modal-title" class="text-[15px] font-semibold tracking-tight text-slate-900">Tooth <span id="tooth-modal-no" class="font-mono"></span></h3>
+        <p id="tooth-modal-name" class="mt-0.5 text-[13px] text-slate-500"></p>
+      </div>
+      <button class="btn btn-ghost btn-sm !text-slate-500" onclick="closeTooth()" aria-label="Close">
+        <i class="ph ph-x text-xl"></i>
+      </button>
+    </div>
+    <form id="tooth-form" method="post" action="">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="space-y-4">
+        <fieldset>
+          <legend class="label">Condition</legend>
+          <div class="grid grid-cols-2 gap-2">
+            {% for s in statuses %}
+            <label class="status-option" style="--tc: {{ tcolors[s] }}">
+              <input type="radio" name="status" value="{{ s }}" {{ 'checked' if s == 'Healthy' }}>
+              <span class="status-dot" aria-hidden="true"></span>
+              <span class="truncate">{{ s }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="tooth_notes">Clinical notes</label>
+          <textarea class="input" id="tooth_notes" name="notes" rows="3" placeholder="Findings, care plan"></textarea>
+        </div>
+      </div>
+      <div class="mt-5 flex items-center justify-end gap-3">
+        <button type="button" class="btn btn-secondary" onclick="closeTooth()">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="ph-bold ph-floppy-disk"></i> Save tooth
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var actionBase = {{ url_for('chart.save_tooth', pid=patient.id, tooth_no='')|tojson }};
+    var modal = document.getElementById('tooth-modal');
+    var form = document.getElementById('tooth-form');
+    var noEl = document.getElementById('tooth-modal-no');
+    var nameEl = document.getElementById('tooth-modal-name');
+    var notesEl = document.getElementById('tooth_notes');
+
+    function toothLabel(no) {
+      var n = parseInt(no, 10);
+      var quad = Math.floor(n / 10);
+      var arch = quad <= 2 ? 'Upper' : 'Lower';
+      var side = quad === 2 || quad === 3 ? 'left' : 'right';
+      return arch + ' ' + side + ', quadrant ' + quad;
+    }
+
+    window.openTooth = function (no, status, notes) {
+      noEl.textContent = no;
+      nameEl.textContent = toothLabel(no);
+      var radio = form.querySelector('input[name="status"][value="' + status + '"]');
+      if (radio) radio.checked = true;
+      notesEl.value = notes || '';
+      form.action = actionBase + no;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      requestAnimationFrame(function () {
+        modal.classList.add('is-open');
+      });
+      requestAnimationFrame(function () {
+        notesEl.focus();
+      });
+    };
+    window.closeTooth = function () {
+      modal.classList.remove('is-open');
+      setTimeout(function () {
+        if (!modal.classList.contains('is-open')) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
+      }, 160);
+    };
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') window.closeTooth();
+    });
+
+    document.querySelectorAll('.legend-chip').forEach(function (chip) {
+      var status = chip.getAttribute('data-status');
+      var cells = document.querySelectorAll('.tooth-cell[data-status="' + status + '"]');
+      function lit(on) {
+        cells.forEach(function (cell) {
+          cell.classList.toggle('is-lit', on);
+        });
+      }
+      chip.addEventListener('mouseenter', function () { lit(true); });
+      chip.addEventListener('mouseleave', function () { lit(false); });
+      chip.addEventListener('focus', function () { lit(true); });
+      chip.addEventListener('blur', function () { lit(false); });
+    });
+  })();
+</script>
+{% endif %}
+{% endblock %}

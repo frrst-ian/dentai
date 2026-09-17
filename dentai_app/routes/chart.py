@@ -16,11 +16,19 @@ def patient_chart(pid):
         return 'Patient not found', 404
     rows = db.list_tooth_records(patient['patient_id'])
     records = db.list_treatment_records(patient['patient_id'])
-    tooth_map = {r['tooth_no']: r for r in rows}
+    tooth_map = {int(r['tooth_no']): r for r in rows}
+    counts = {}
+    for t in config.ALL_TEETH:
+        rec = tooth_map.get(t)
+        st = rec['status'] if rec else 'Healthy'
+        counts[st] = counts.get(st, 0) + 1
+    for s in config.TOOTH_STATUSES:
+        counts.setdefault(s, 0)
+    flagged = sum(v for k, v in counts.items() if k != 'Healthy')
     return render_template(
         'chart.html', patient=patient, tooth_map=tooth_map, records=records,
         upper=config.FDI_UPPER, lower=config.FDI_LOWER, all_teeth=config.ALL_TEETH,
-        statuses=config.TOOTH_STATUSES)
+        statuses=config.TOOTH_STATUSES, counts=counts, flagged=flagged)
 
 
 @bp.route('/patients/<int:pid>/tooth/<tooth_no>', methods=['POST'])
