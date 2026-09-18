@@ -4,8 +4,8 @@
 {% set p = patient %}
 <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
   <div>
-    <h1 class="text-2xl font-semibold tracking-tight">{{ 'Edit patient' if patient else 'Add patient' }}</h1>
-    <p class="mt-1 text-sm text-slate-500">
+    <h1 class="text-balance text-2xl font-semibold tracking-tight">{{ 'Edit patient' if patient else 'Add patient' }}</h1>
+    <p class="mt-1 text-pretty text-sm text-slate-500">
       {{ p.patient_id if p else 'A new record will be linked to a patient code.' }}
     </p>
   </div>

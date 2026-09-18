@@ -152,3 +152,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Agent rules (local, not shared)
+AGENTS.md
+.interface-design

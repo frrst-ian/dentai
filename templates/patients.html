@@ -5,8 +5,8 @@
 
 <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
   <div>
-    <h1 class="text-2xl font-semibold tracking-tight">Patients</h1>
-    <p class="mt-1 text-sm text-slate-500">{{ total }} record{{ '' if total == 1 else 's' }}{% if search %} matching &ldquo;{{ search }}&rdquo;{% endif %}</p>
+    <h1 class="text-balance text-2xl font-semibold tracking-tight">Patients</h1>
+    <p class="mt-1 text-pretty text-sm text-slate-500">{{ total }} record{{ '' if total == 1 else 's' }}{% if search %} matching &ldquo;{{ search }}&rdquo;{% endif %}</p>
   </div>
   {% if is_writer %}
   <a href="{{ url_for('patients.patient_new') }}" class="btn btn-primary">
@@ -45,7 +45,7 @@
             <div class="font-medium text-slate-800">{{ p.name }}</div>
             {% if p.phone %}<div class="text-xs text-slate-400">{{ p.phone }}</div>{% endif %}
           </td>
-          <td class="px-5 py-3 text-slate-600">{{ p.age }}</td>
+          <td class="px-5 py-3 tabular-nums text-slate-600">{{ p.age }}</td>
           <td class="px-5 py-3 text-slate-600">{{ p.sex }}</td>
           <td class="px-5 py-3">
             {% if p.periodontal_status == 'Severe' %}
@@ -88,15 +88,17 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="{% if is_writer %}7{% else %}6{% endif %}" class="px-5 py-12 text-center">
-            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400">
-              <i class="ph ph-users-three text-xl"></i>
+          <td colspan="{% if is_writer %}7{% else %}6{% endif %}">
+            <div class="empty-state">
+              <span class="empty-state-icon"><i class="ph ph-users-three text-xl"></i></span>
+              {% if search %}
+              <p class="empty-state-title">No patients match &ldquo;{{ search }}&rdquo;</p>
+              <p class="empty-state-hint">Try a different name, ID or phone.</p>
+              {% else %}
+              <p class="empty-state-title">No patients yet</p>
+              {% if is_writer %}<p class="empty-state-hint">Add the first patient to start the ledger.</p>{% endif %}
+              {% endif %}
             </div>
-            {% if search %}
-            <p class="text-sm text-slate-500">No patients match &ldquo;{{ search }}&rdquo;.</p>
-            {% else %}
-            <p class="text-sm text-slate-500">No patients yet.</p>
-            {% endif %}
           </td>
         </tr>
         {% endfor %}

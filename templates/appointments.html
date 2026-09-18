@@ -16,8 +16,8 @@
 } %}
 
 <div class="mb-6">
-  <h1 class="text-2xl font-semibold tracking-tight">Appointments</h1>
-  <p class="mt-1 text-sm text-slate-500">{{ total_appointments }} scheduled visits across the clinic.</p>
+  <h1 class="text-balance text-2xl font-semibold tracking-tight">Appointments</h1>
+  <p class="mt-1 text-pretty text-sm text-slate-500">{{ total_appointments }} scheduled visits across the clinic.</p>
 </div>
 
 {% if is_writer %}
@@ -124,14 +124,18 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="{% if is_writer %}7{% else %}6{% endif %}" class="px-5 py-12 text-center">
-            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400">
-              <i class="ph ph-calendar-blank text-xl"></i>
+          <td colspan="{% if is_writer %}7{% else %}6{% endif %}">
+            <div class="empty-state">
+              <span class="empty-state-icon"><i class="ph ph-calendar-blank text-xl"></i></span>
+              {% if status_filter %}
+              <p class="empty-state-title">No {{ status_filter|lower }} appointments</p>
+              <p class="empty-state-hint">Nothing in this bucket right now.</p>
+              <a href="{{ url_for('admin.appointments') }}" class="btn btn-secondary btn-sm mt-4">Show all</a>
+              {% else %}
+              <p class="empty-state-title">No appointments booked</p>
+              {% if is_writer %}<p class="empty-state-hint">Book the first visit to fill the day.</p>{% endif %}
+              {% endif %}
             </div>
-            <p class="text-sm text-slate-500">
-              {% if status_filter %}No {{ status_filter|lower }} appointments.{% else %}No appointments booked.{% endif %}
-            </p>
-            {% if status_filter %}<a href="{{ url_for('admin.appointments') }}" class="btn btn-secondary btn-sm mt-2">Show all</a>{% endif %}
           </td>
         </tr>
         {% endfor %}

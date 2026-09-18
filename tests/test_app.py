@@ -13,7 +13,6 @@ CSRF_RE = re.compile(rb'name="csrf_token" value="([^"]+)"')
 
 
 def get_csrf(client):
-    """Fetch a valid CSRF token for the current session (works pre/post login)."""
     r = client.get('/', follow_redirects=True)
     m = CSRF_RE.search(r.data)
     assert m, 'no CSRF token found on page'
@@ -54,8 +53,6 @@ def _create_patient(client, code='TEST-001', name='Test Patient'):
     raise AssertionError(f'patient {code} not created')
 
 
-# ---- auth ----
-
 def test_login_page_renders(client):
     assert client.get('/').status_code == 200
 
@@ -82,8 +79,6 @@ def test_logout_clears_session(admin_client):
     assert admin_client.get('/dashboard').status_code == 302
 
 
-# ---- CSRF ----
-
 def test_csrf_reject_missing_token(client):
     assert client.post('/login', data={'email': ADMIN[0], 'password': ADMIN[1]}).status_code == 403
 
@@ -100,8 +95,6 @@ def test_csrf_reject_api(client):
     r = client.post('/api/predict', json={'dental_pain': 'Yes'})
     assert r.status_code == 403
 
-
-# ---- dashboard / patients ----
 
 def test_dashboard(admin_client):
     r = admin_client.get('/dashboard')
@@ -163,8 +156,6 @@ def test_patient_pagination(admin_client):
     assert b'Page 2 of' in r.data
 
 
-# ---- dental chart ----
-
 def test_chart_page(admin_client):
     pid = _create_patient(admin_client)
     r = admin_client.get(f'/patients/{pid}/chart')
@@ -207,8 +198,6 @@ def test_add_treatment_record(admin_client):
     assert any(x['procedure'] == 'Composite filling' for x in records)
 
 
-# ---- AI ----
-
 def test_ai_page(admin_client):
     pid = _create_patient(admin_client)
     assert admin_client.get(f'/patients/{pid}/ai').status_code == 200
@@ -228,10 +217,9 @@ def test_predict(admin_client):
     })
     assert r.status_code == 200
     assert b'Prediction result' in r.data
-    assert b'Likelihood of urgent care' in r.data
+    assert b'Treatment urgency' in r.data
+    assert b'urgent care' in r.data
 
-
-# ---- appointments / reports / users ----
 
 def test_appointments_page(admin_client):
     assert admin_client.get('/appointments').status_code == 200
@@ -281,8 +269,6 @@ def test_users_denies_dentist(client):
     login(client, *DENTIST)
     assert client.get('/users').status_code == 403
 
-
-# ---- JSON API ----
 
 def test_api_predict(admin_client):
     r = api_post(admin_client, '/api/predict', {

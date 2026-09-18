@@ -2,8 +2,8 @@
 {% block title %}Risk assessment - DentAI Dental{% endblock %}
 {% block content %}
 <div class="mb-6">
-  <h1 class="text-2xl font-semibold tracking-tight">Risk assessment</h1>
-  <p class="mt-1 max-w-xl text-sm text-slate-500">
+  <h1 class="text-balance text-2xl font-semibold tracking-tight">Risk assessment</h1>
+  <p class="mt-1 max-w-xl text-pretty text-sm text-slate-500">
     Choose a patient to open the AI treatment-urgency assessment, or run one
     from the patient's dental chart. Results are decision support only.
   </p>
@@ -27,7 +27,7 @@
         <tr class="hover:bg-slate-50">
           <td class="px-5 py-3 font-mono text-xs text-slate-500">{{ p.patient_id }}</td>
           <td class="px-5 py-3 font-medium text-slate-800">{{ p.name }}</td>
-          <td class="px-5 py-3 text-slate-600">{{ p.age }}</td>
+          <td class="px-5 py-3 tabular-nums text-slate-600">{{ p.age }}</td>
           <td class="px-5 py-3">
             {% if p.periodontal_status == 'Severe' %}
             <span class="badge bg-rose-50 text-rose-700">{{ p.periodontal_status }}</span>
@@ -37,7 +37,7 @@
             <span class="badge bg-emerald-50 text-emerald-700">{{ p.periodontal_status }}</span>
             {% endif %}
           </td>
-          <td class="px-5 py-3 text-slate-600">{{ p.caries_count }}</td>
+          <td class="px-5 py-3 tabular-nums text-slate-600">{{ p.caries_count }}</td>
           <td class="px-5 py-3 text-right">
             <a href="{{ url_for('ai.patient_ai', pid=p.id) }}" class="btn btn-primary btn-sm">
               Run assessment <i class="ph-bold ph-arrow-right"></i>
@@ -46,11 +46,12 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="6" class="px-5 py-12 text-center">
-            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400">
-              <i class="ph ph-stethoscope text-xl"></i>
+          <td colspan="6">
+            <div class="empty-state">
+              <span class="empty-state-icon"><i class="ph ph-stethoscope text-xl"></i></span>
+              <p class="empty-state-title">No patients available</p>
+              <p class="empty-state-hint">Add a patient first to run an assessment.</p>
             </div>
-            <p class="text-sm text-slate-500">No patients available. Add a patient first.</p>
           </td>
         </tr>
         {% endfor %}

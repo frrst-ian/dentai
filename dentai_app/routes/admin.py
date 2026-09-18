@@ -13,7 +13,10 @@ STATUS_OPTIONS = ['Scheduled', 'Completed', 'Cancelled', 'No-show']
 def dashboard():
     stats = db.dashboard_stats()
     recent = db.recent_patients(5)
-    return render_template('dashboard.html', stats=stats, recent=recent)
+    upcoming = db.list_appointments(status='Scheduled', limit=3)
+    scheduled = db.appointment_status_counts().get('Scheduled', 0)
+    return render_template('dashboard.html', stats=stats, recent=recent,
+                           upcoming=upcoming, scheduled=scheduled)
 
 
 @bp.route('/appointments')

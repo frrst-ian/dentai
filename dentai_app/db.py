@@ -196,7 +196,7 @@ def add_treatment(patient_code, f):
                    datetime.now().isoformat()))
 
 
-def list_appointments(status=''):
+def list_appointments(status='', limit=None):
     sql = ('SELECT a.id, a.patient_id, a.date, a.time, a.dentist, a.purpose, a.status, '
            '       p.name AS patient_name '
            'FROM appointments a LEFT JOIN patients p ON a.patient_id = p.patient_id')
@@ -205,6 +205,9 @@ def list_appointments(status=''):
         sql += ' WHERE a.status = ?'
         args = (status,)
     sql += ' ORDER BY a.date, a.time, a.id'
+    if limit:
+        sql += ' LIMIT ?'
+        args += (limit,)
     with get_conn() as c:
         rows = c.execute(sql, args).fetchall()
     return rows

@@ -51,6 +51,12 @@
 html {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+#chart,
+#records {
+  scroll-margin-top: 5.5rem;
 }
 
 body {
@@ -84,7 +90,7 @@ textarea {
       whitespace-nowrap border border-transparent;
   }
   .btn:active {
-    transform: translateY(1px);
+    transform: translateY(1px) scale(0.98);
   }
   .btn-primary {
     @apply bg-brand-700 text-white hover:bg-brand-800;
@@ -122,13 +128,29 @@ textarea {
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
 
+  .empty-state {
+    @apply flex flex-col items-center justify-center px-6 py-12 text-center;
+  }
+  .empty-state-icon {
+    @apply mb-3 grid h-11 w-11 place-items-center rounded-full bg-slate-100 text-slate-400;
+  }
+  .empty-state-title {
+    @apply text-sm font-medium text-slate-600;
+  }
+  .empty-state-hint {
+    @apply mt-1 text-[13px] text-slate-400;
+  }
+
   .sidebar-link {
     @apply flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium
       text-slate-600 no-underline hover:bg-slate-200/70 hover:text-slate-900;
   }
-  .sidebar-link-active {
-    @apply bg-brand-700 text-white hover:bg-brand-700 hover:text-white
-      shadow-soft;
+  .sidebar-link-active,
+  .sidebar-link-active:hover {
+    @apply bg-brand-50 font-semibold text-brand-900;
+  }
+  .sidebar-link-active i {
+    color: var(--color-brand-700);
   }
 }
 
@@ -325,6 +347,88 @@ textarea {
   opacity: 1;
   transform: none;
 }
+.tooth-modal-backdrop {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+.tooth-modal.is-open .tooth-modal-backdrop {
+  opacity: 1;
+}
+.tooth-modal.is-leaving .tooth-modal-panel {
+  opacity: 0;
+  transform: translateY(8px) scale(0.97);
+  transition: opacity 120ms ease-in, transform 180ms cubic-bezier(0.55, 0, 1, 0.45);
+}
+.tooth-modal.is-leaving .tooth-modal-backdrop {
+  opacity: 0;
+  transition: opacity 120ms ease-in;
+}
+
+/* Urgency ring (prediction result) ------------------------------------------------ */
+
+.ring-fill {
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    stroke 0.3s ease;
+}
+
+/* Mobile nav overlay --------------------------------------------------------- */
+
+#sidebar-overlay {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 200ms ease-out, visibility 200ms ease-out;
+}
+#sidebar-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Flash message entrance --------------------------------------------------- */
+
+@keyframes flash-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .flash-card {
+    animation: flash-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+/* Flash message dismiss ------------------------------------------------------ */
+
+.flash-leave {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+/* Report status bars --------------------------------------------------------- */
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.bar {
+  transform-origin: left;
+  transform: scaleX(0);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bar {
+    animation: bar-grow 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 80ms + 60ms);
+  }
+}
 
 /* Appointment filter pills --------------------------------------------------- */
 
@@ -393,8 +497,13 @@ textarea {
 
 /* Reduced motion: collapse transitions to an instant state ------------------ */
 @media (prefers-reduced-motion: reduce) {
-  .tooth-cell {
+  .tooth-cell,
+  .flash-card,
+  .bar {
     animation: none !important;
+  }
+  .bar {
+    transform: none !important;
   }
   *,
   *::before,

@@ -13,7 +13,7 @@
 <div class="min-h-[100dvh] lg:grid lg:grid-cols-[16rem_1fr]">
 
   <!-- Mobile overlay -->
-  <div id="sidebar-overlay" class="fixed inset-0 z-30 hidden bg-slate-950/40 backdrop-blur-[2px] lg:hidden"></div>
+  <div id="sidebar-overlay" class="fixed inset-0 z-30 bg-slate-950/40 backdrop-blur-[2px] lg:hidden"></div>
 
   <!-- Sidebar -->
   <aside id="sidebar"
@@ -94,7 +94,7 @@
         {% if messages %}
           <div class="mb-5 space-y-3">
             {% for message in messages %}
-            <div class="card flex items-center gap-3 border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <div class="card flash-card flex items-center gap-3 border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
               <i class="ph-bold ph-check-circle text-emerald-600"></i>
               <span class="flex-1">{{ message }}</span>
               <button class="flash-dismiss btn btn-ghost btn-sm !text-emerald-700" aria-label="Dismiss">

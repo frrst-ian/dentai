@@ -2,67 +2,120 @@
 {% block title %}Prediction result - DentAI Dental{% endblock %}
 {% block content %}
 {% set urgent = result.prediction == 'Urgent' %}
+{% set verdict_color = 'text-rose-600' if urgent else 'text-emerald-600' %}
 
 <div class="mb-6">
-  <h1 class="text-2xl font-semibold tracking-tight">Prediction result</h1>
-  <p class="mt-1 text-sm text-slate-500">{{ patient }} - reviewed against the current record.</p>
+  <h1 class="text-balance text-2xl font-semibold tracking-tight">Prediction result</h1>
+  <p class="mt-1 text-pretty text-sm text-slate-500">{{ patient }} - reviewed against the current record.</p>
 </div>
 
-<div class="card overflow-hidden">
-  <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 px-5 py-5">
-    <div class="flex items-center gap-4">
-      <span class="grid h-12 w-12 place-items-center rounded-xl
-        {% if urgent %}bg-rose-100 text-rose-600{% else %}bg-emerald-100 text-emerald-600{% endif %}">
-        <i class="ph-bold ph-{% if urgent %}warning{% else %}check-circle{% endif %} text-2xl"></i>
-      </span>
-      <div>
-        <div class="text-xs font-medium uppercase tracking-wide text-slate-400">Treatment urgency</div>
-        <div class="text-2xl font-semibold tracking-tight {% if urgent %}text-rose-600{% else %}text-emerald-600{% endif %}">
-          {{ result.prediction }}
+<section class="card overflow-hidden">
+  <div class="grid gap-6 p-6 sm:p-7 lg:grid-cols-[auto_1fr] lg:items-center">
+    <div class="relative h-36 w-36 shrink-0">
+      <svg class="h-full w-full -rotate-90" viewBox="0 0 140 140" role="img"
+           aria-label="{{ result.urgency }} percent likelihood of urgent care">
+        <circle cx="70" cy="70" r="62" fill="none" stroke-width="11" class="stroke-slate-100"></circle>
+        <circle class="ring-fill {% if urgent %}stroke-rose-500{% else %}stroke-emerald-500{% endif %}"
+          cx="70" cy="70" r="62" fill="none" stroke-width="11" stroke-linecap="round"
+          stroke-dasharray="389.6" stroke-dashoffset="389.6" data-pct="{{ result.urgency }}"></circle>
+      </svg>
+      <div class="absolute inset-0 grid place-items-center">
+        <div class="text-center">
+          <div class="text-3xl font-semibold tabular-nums tracking-tight text-slate-900">
+            <span id="urgency-num">{{ result.urgency }}</span><span class="text-lg text-slate-400">%</span>
+          </div>
+          <div class="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">urgent care</div>
         </div>
       </div>
     </div>
-    <div class="text-right">
-      <div class="text-xs font-medium uppercase tracking-wide text-slate-400">Likelihood of urgent care</div>
-      <div class="text-2xl font-semibold tracking-tight text-slate-900">{{ result.urgency }}%</div>
-      <div class="text-xs text-slate-400">Model: {{ result.model }}</div>
+
+    <div class="min-w-0">
+      <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Treatment urgency</div>
+      <div class="mt-1.5 flex items-center gap-2.5">
+        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg
+          {% if urgent %}bg-rose-100 text-rose-600{% else %}bg-emerald-100 text-emerald-600{% endif %}">
+          <i class="ph-bold ph-{% if urgent %}warning{% else %}check-circle{% endif %} text-lg"></i>
+        </span>
+        <div class="text-[26px] font-semibold tracking-tight {{ verdict_color }}">{{ result.prediction }}</div>
+      </div>
+      <p class="mt-3 max-w-xl text-pretty text-[13px] leading-relaxed text-slate-500">
+        The model estimates
+        a <span class="font-semibold tabular-nums text-slate-700">{{ result.urgency }}%</span> likelihood that
+        this patient needs urgent care, using <span class="font-medium text-slate-700">{{ result.model }}</span>.
+        Confirm with a clinical examination.
+      </p>
     </div>
   </div>
 
-  <div class="px-5 py-5">
-    <h2 class="mb-3 text-[15px] font-semibold tracking-tight text-slate-900">Contributing signals</h2>
+  <div class="border-t border-slate-100 px-6 py-5 sm:px-7">
+    <div class="mb-3 flex items-center gap-2">
+      <h2 class="text-[15px] font-semibold tracking-tight text-slate-900">Contributing signals</h2>
+      {% if result.reasons %}<span class="badge bg-slate-100 text-slate-600 tabular-nums">{{ result.reasons|length }}</span>{% endif %}
+    </div>
     {% if result.reasons %}
-    <ul class="space-y-2">
+    <ul class="grid grid-cols-1 gap-2 md:grid-cols-2">
       {% for signal, note in result.reasons %}
       <li class="flex items-start gap-3 rounded-lg bg-slate-50 px-4 py-3">
         <i class="ph-bold ph-arrow-u-right-up mt-0.5 text-amber-500"></i>
-        <div>
+        <div class="min-w-0">
           <div class="text-sm font-medium text-slate-800">{{ signal }}</div>
-          <div class="text-[13px] text-slate-500">{{ note }}</div>
+          <div class="text-pretty text-[13px] text-slate-500">{{ note }}</div>
         </div>
       </li>
       {% endfor %}
     </ul>
     {% else %}
-    <p class="text-sm text-slate-500">No specific urgency signals were identified for this record.</p>
+    <p class="text-pretty text-sm text-slate-500">No specific urgency signals were identified for this record.</p>
     {% endif %}
   </div>
 
-  <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-4">
-    <p class="max-w-xl text-[13px] leading-relaxed text-slate-500">
-      This result is decision support generated from synthetic training data.
-      Confirm the plan with a clinical examination.
+  <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-6 py-4 sm:px-7">
+    <p class="max-w-xl text-pretty text-[13px] leading-relaxed text-slate-500">
+      Decision support generated from synthetic training data. Never replaces a dentist's judgment.
     </p>
     <div class="flex gap-3">
-      <a href="{{ url_for('ai.risk') }}" class="btn btn-secondary">
+      <a href="{{ url_for('ai.risk') }}" class="btn btn-secondary btn-sm">
         <i class="ph ph-arrow-left"></i> All patients
       </a>
       {% if pid %}
-      <a href="{{ url_for('ai.patient_ai', pid=pid) }}" class="btn btn-primary">
+      <a href="{{ url_for('ai.patient_ai', pid=pid) }}" class="btn btn-primary btn-sm">
         <i class="ph-bold ph-stethoscope"></i> New assessment
       </a>
       {% endif %}
     </div>
   </div>
-</div>
+</section>
+
+<script>
+  (function () {
+    var fill = document.querySelector('.ring-fill');
+    var num = document.getElementById('urgency-num');
+    if (!fill || !num) return;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var pct = Math.min(Math.max(parseFloat(fill.getAttribute('data-pct')) || 0, 0), 100);
+    var circ = 2 * Math.PI * 62;
+    if (reduce) {
+      fill.style.strokeDashoffset = circ * (1 - pct / 100);
+      return;
+    }
+    num.textContent = '0';
+    var duration = 900;
+    var start = null;
+    function easeOutQuint(t) {
+      return 1 - Math.pow(1 - t, 5);
+    }
+    function count(ts) {
+      if (start === null) start = ts;
+      var t = Math.min((ts - start) / duration, 1);
+      num.textContent = Math.round(easeOutQuint(t) * pct);
+      if (t < 1) requestAnimationFrame(count);
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        fill.style.strokeDashoffset = circ * (1 - pct / 100);
+      });
+      requestAnimationFrame(count);
+    });
+  })();
+</script>
 {% endblock %}

@@ -1,37 +1,88 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard - DentAI Dental{% endblock %}
 {% block content %}
+{% set is_writer = session.get('role') in ('Dentist', 'Administrator') %}
+
 <div class="mb-6">
-  <h1 class="text-2xl font-semibold tracking-tight">Overview</h1>
-  <p class="mt-1 text-sm text-slate-500">Welcome back, {{ session.get('name') }}.</p>
+  <h1 class="text-balance text-2xl font-semibold tracking-tight">Overview</h1>
+  <p class="mt-1 text-pretty text-sm text-slate-500">Welcome back, {{ session.get('name') }}.</p>
 </div>
 
-<div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-  <div class="card flex items-center gap-4 p-5">
-    <span class="grid h-11 w-11 place-items-center rounded-lg bg-brand-100 text-brand-700">
-      <i class="ph-bold ph-users-three text-[22px]"></i>
-    </span>
-    <div>
-      <div class="text-2xl font-semibold tracking-tight text-slate-900">{{ stats.patients }}</div>
-      <div class="text-sm text-slate-500">Patients</div>
+<div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+
+  <section class="card overflow-hidden lg:col-span-2">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+      <div>
+        <h2 class="text-[15px] font-semibold tracking-tight text-slate-900">Upcoming appointments</h2>
+        <p class="mt-0.5 text-[13px] text-slate-500">
+          <span class="font-semibold tabular-nums text-slate-700">{{ scheduled }}</span> scheduled
+          {% if scheduled != 1 %}visits{% else %}visit{% endif %} on the books. The next one is below.
+        </p>
+      </div>
+      <a href="{{ url_for('admin.appointments') }}" class="btn btn-secondary btn-sm">View all</a>
     </div>
-  </div>
-  <div class="card flex items-center gap-4 p-5">
-    <span class="grid h-11 w-11 place-items-center rounded-lg bg-sky-100 text-sky-700">
-      <i class="ph-bold ph-calendar-blank text-[22px]"></i>
-    </span>
-    <div>
-      <div class="text-2xl font-semibold tracking-tight text-slate-900">{{ stats.appointments }}</div>
-      <div class="text-sm text-slate-500">Appointments</div>
+
+    {% if upcoming %}
+    <ul class="divide-y divide-slate-50">
+      {% for a in upcoming %}
+      <li class="flex items-center gap-5 px-5 py-3.5">
+        <div class="w-16">
+          <div class="font-semibold tabular-nums text-slate-900">{{ a.time }}</div>
+          <div class="text-xs tabular-nums text-slate-400">{{ a.date }}</div>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="truncate font-medium text-slate-800">
+            {{ a.patient_name or ('Patient ' ~ a.patient_id) }}
+            {% if a.patient_id %}<span class="ml-1.5 font-mono text-xs font-normal text-slate-400">{{ a.patient_id }}</span>{% endif %}
+          </div>
+          <div class="truncate text-[13px] text-slate-500">{{ a.purpose or 'Checkup' }}</div>
+        </div>
+        <div class="hidden shrink-0 text-right text-[13px] text-slate-500 sm:block">{{ a.dentist or 'Unassigned' }}</div>
+        <span class="badge bg-sky-50 text-sky-700">
+          <span class="h-1.5 w-1.5 rounded-full bg-sky-500"></span>Scheduled
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+      <span class="empty-state-icon"><i class="ph ph-calendar-blank text-xl"></i></span>
+      <p class="empty-state-title">No upcoming visits on the books</p>
+      <p class="empty-state-hint">Book the next appointment to keep the schedule moving.</p>
+      {% if is_writer %}
+      <a href="{{ url_for('admin.appointments') }}" class="btn btn-primary btn-sm mt-4">Book an appointment</a>
+      {% endif %}
     </div>
-  </div>
-  <div class="card flex items-center gap-4 p-5">
-    <span class="grid h-11 w-11 place-items-center rounded-lg bg-violet-100 text-violet-700">
-      <i class="ph-bold ph-shield-check text-[22px]"></i>
-    </span>
-    <div>
-      <div class="text-2xl font-semibold tracking-tight text-slate-900">{{ stats.users }}</div>
-      <div class="text-sm text-slate-500">Active users</div>
+    {% endif %}
+  </section>
+
+  <div class="grid grid-cols-2 gap-5 lg:grid-cols-1">
+    <div class="card flex flex-col justify-between gap-4 p-5">
+      <div>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Patients</div>
+        <div class="mt-1 text-3xl font-semibold tabular-nums tracking-tight text-slate-900">{{ stats.patients }}</div>
+        <div class="mt-0.5 text-[13px] text-slate-500">in the system</div>
+      </div>
+      {% if is_writer %}
+      <a href="{{ url_for('patients.patient_new') }}" class="btn btn-secondary btn-sm self-start">
+        <i class="ph-bold ph-plus"></i> Add patient
+      </a>
+      {% else %}
+      <a href="{{ url_for('patients.patients') }}" class="btn btn-secondary btn-sm self-start">Open records</a>
+      {% endif %}
+    </div>
+
+    <div class="card flex flex-col justify-between gap-4 p-5">
+      <div>
+        <div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">Team</div>
+        <div class="mt-1 text-3xl font-semibold tabular-nums tracking-tight text-slate-900">{{ stats.users }}</div>
+        <div class="mt-0.5 text-[13px] text-slate-500">active accounts</div>
+      </div>
+      {% if session.get('role') == 'Administrator' %}
+      <a href="{{ url_for('admin.users') }}" class="btn btn-secondary btn-sm self-start">Manage users</a>
+      {% else %}
+      <a href="{{ url_for('admin.reports') }}" class="btn btn-secondary btn-sm self-start">Practice profile</a>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -57,7 +108,7 @@
         <tr class="hover:bg-slate-50">
           <td class="px-5 py-3 font-mono text-xs text-slate-500">{{ p.patient_id }}</td>
           <td class="px-5 py-3 font-medium text-slate-800">{{ p.name }}</td>
-          <td class="px-5 py-3 text-slate-600">{{ p.age }}</td>
+          <td class="px-5 py-3 tabular-nums text-slate-600">{{ p.age }}</td>
           <td class="px-5 py-3">
             {% if (p.periodontal_status or 'Healthy') == 'Healthy' %}
             <span class="badge bg-emerald-50 text-emerald-700"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Healthy</span>
@@ -73,11 +124,12 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="5" class="px-5 py-10 text-center">
-            <div class="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400">
-              <i class="ph ph-users-three text-xl"></i>
+          <td colspan="5">
+            <div class="empty-state">
+              <span class="empty-state-icon"><i class="ph ph-users-three text-xl"></i></span>
+              <p class="empty-state-title">No patients yet</p>
+              {% if is_writer %}<p class="empty-state-hint">Add the first patient to get started.</p>{% endif %}
             </div>
-            <p class="text-sm text-slate-500">No patients yet.</p>
           </td>
         </tr>
         {% endfor %}

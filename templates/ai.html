@@ -6,8 +6,8 @@
 
 <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
   <div>
-    <h1 class="text-2xl font-semibold tracking-tight">AI treatment-urgency prediction</h1>
-    <p class="mt-1 text-sm text-slate-500">{{ p.name }} - {{ p.patient_id }}</p>
+    <h1 class="text-balance text-2xl font-semibold tracking-tight">AI treatment-urgency prediction</h1>
+    <p class="mt-1 text-pretty text-sm text-slate-500">{{ p.name }} - {{ p.patient_id }}</p>
   </div>
   <a href="{{ url_for('chart.patient_chart', pid=p.id) }}" class="btn btn-secondary">
     <i class="ph ph-arrow-left"></i> Back to patient

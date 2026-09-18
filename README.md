@@ -1,20 +1,25 @@
 # DentAI Dental
 
-Academic demo/prototype — a Flask patient-management app for dental clinics with an
-ML treatment-urgency predictor. **Do not use for real clinical decisions**: the ML
-component uses synthetic training data, and sample patients are not real records.
+Academic demo of a clinic patient-management app with an ML treatment-urgency
+predictor. **Not for real clinical decisions**: the ML model is trained on synthetic
+data and sample patients are not real records.
 
-## Features
+## Quick start
 
-- Login / logout (POST-only) with role-based access (Dentist, Administrator, Evaluator)
-- Dashboard with live stats and recent patients
-- Patient management (add / edit / search / paginated list / delete / CSV import)
-- Interactive FDI dental chart (teeth 11–48) with 9 tooth statuses
-- Treatment / clinical record history per patient
-- AI treatment-urgency prediction (5 sklearn models) with signals breakdown and a linked risk-assessment page
-- Appointments with inline status updates, Reports & Analytics, User management
-- CSRF protection on all state-changing requests
-- JSON API: `POST /api/predict`, `POST /api/import_csv`
+Requires Python 3.10+ and Node.js 18+ (for the Tailwind build).
+
+```bash
+python -m venv venv
+. venv/bin/activate            # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+npm install
+npm run build                  # compile static/src -> static/dist/tailwind.css
+python app.py
+```
+
+Open http://127.0.0.1:5000 (Windows: double-click `run.bat`). First launch creates
+and migrates `dental_ai.db`, seeds sample data, and trains ML models lazily on the
+first prediction (cached in `models/`).
 
 ## Demo accounts
 
@@ -24,50 +29,32 @@ component uses synthetic training data, and sample patients are not real records
 | Dentist       | dentist@dentalai.local  | dentist123  |
 | Evaluator     | evaluator@dentalai.local| evaluator123|
 
-Evaluator is read-only; Patient/AI/reports areas. Dentist and Administrator can also
-create and edit patients, teeth, treatments, and appointments. `/users` is
-Administrator-only.
+Evaluator is read-only (no edits, no CSV import). Dentist and Administrator edit
+patients, teeth, treatments, and appointments. `/users` is Administrator-only.
 
-## Run
+## Features
 
-```bash
-python -m venv venv
-. venv/bin/activate            # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-npm install                    # Tailwind v4 CLI + vendored fonts/icons
-npm run build                  # compile static/dist/tailwind.css
-python app.py
-```
+- Role-based login/logout (Dentist, Administrator, Evaluator), CSRF-protected
+- Dashboard, patient management (add/edit/search/paginate/delete/CSV import)
+- Interactive FDI dental chart (teeth 11-48) with clinical records and treatment history
+- AI urgency prediction (5 sklearn models) with signals breakdown and risk assessment
+- Appointments, Reports & Analytics, User management
+- JSON API: `POST /api/predict`, `POST /api/import_csv`
 
-Then open http://127.0.0.1:5000. Windows users can also double-click `run.bat`.
+## Config
 
-On first launch the app creates and migrates `dental_ai.db` (SQLite) and seeds sample
-patients and the demo users above. The ML models train lazily on first prediction and
-are cached to `models/` (joblib), so startup stays fast.
-
-Configuration via environment variables:
-
-- `DENTAI_DB` — database path
-- `DENTAI_SECRET` — Flask secret key; if unset, a key is auto-generated and persisted
-  to `.secret_key` in the project root (chmod 600) on first start
-
-Set a strong `DENTAI_SECRET` before any non-demo deployment.
+- `DENTAI_DB`: database path (default `dental_ai.db`)
+- `DENTAI_SECRET`: Flask secret; auto-generated to `.secret_key` (chmod 600) if unset.
+  Set a strong value before any non-demo deployment.
 
 ## Project layout
 
 ```
 app.py                Thin entrypoint (create_app + run)
-dentai_app/           Application package
-  __init__.py         create_app() factory, blueprint registration
-  config.py           Paths, secrets, constants (features, FDI, statuses)
-  db.py               Connections, repositories, seeding
-  migrations.py       Versioned SQLite schema migrations (FK rebuild)
-  ml.py               Synthetic data, model training/cache, risk payload
-  auth.py             login_required / role_required decorators
-  routes/             Blueprints: auth, patients, chart, ai, admin, api
+dentai_app/           Flask package: config, db, migrations, ml, auth, routes/
 templates/            Jinja2 templates
-static/               Tailwind v4 source (static/src) + compiled CSS, fonts, icons
-tests/                pytest smoke suite (35 tests, incl. CSRF, roles, FK checks)
+static/               Tailwind v4 source (static/src) + compiled dist, fonts, icons
+tests/                pytest smoke suite
 ```
 
 ## Tests
@@ -77,26 +64,15 @@ pip install -r requirements-dev.txt
 python -m pytest tests/
 ```
 
-## API examples
+## API example
 
-Every state-changing endpoint requires a valid CSRF token. For the JSON API that
-means an `X-CSRF-Token` header plus a logged-in session cookie: first GET `/` (or any
-page) to obtain a `csrf_token` value and a session cookie, then use both:
+State-changing endpoints require a CSRF token: a session cookie plus an
+`X-CSRF-Token` header from any logged-in page (form field `csrf_token`).
 
 ```bash
-# 1. Obtain a token + session cookie (any logged-in page works)
-curl -c cookies.txt http://127.0.0.1:5000/login -o login.html
-#    extract value="<token>" from login.html (field name="csrf_token")
+curl -c cookies.txt http://127.0.0.1:5000/login -o login.html   # get token + cookie
 
-# 2. JSON API with the token header
 curl -X POST http://127.0.0.1:5000/api/predict \
-  -b cookies.txt \
-  -H "Content-Type: application/json" \
-  -H "X-CSRF-Token: <token>" \
+  -b cookies.txt -H "Content-Type: application/json" -H "X-CSRF-Token: <token>" \
   -d '{"age":45,"sex":"Female","smoking":"Yes","dental_pain":"Yes","caries_count":6,"periodontal_status":"Severe"}'
-
-curl -X POST http://127.0.0.1:5000/api/import_csv \
-  -b cookies.txt \
-  -H "X-CSRF-Token: <token>" \
-  -F "file=@patients.csv"
 ```

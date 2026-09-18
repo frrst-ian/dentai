@@ -10,8 +10,8 @@
 {% set order = ['Healthy', 'Mild', 'Moderate', 'Severe'] %}
 
 <div class="mb-6">
-  <h1 class="text-2xl font-semibold tracking-tight">Reports and analytics</h1>
-  <p class="mt-1 text-sm text-slate-500">Practice profile and model reference metrics.</p>
+  <h1 class="text-balance text-2xl font-semibold tracking-tight">Reports and analytics</h1>
+  <p class="mt-1 text-pretty text-sm text-slate-500">Practice profile and model reference metrics.</p>
 </div>
 
 <div class="card overflow-hidden">
@@ -29,8 +29,7 @@
           <span class="font-mono text-xs text-slate-500">{{ n }} patient{{ '' if n == 1 else 's' }}</span>
         </div>
         <div class="h-2.5 overflow-hidden rounded-full bg-slate-100">
-          <div class="h-full rounded-full {{ status_styles.get(s, 'bg-slate-400') }}"
-               style="width: {{ (n / count_max * 100) ~ '%' if n else '0%' }}"></div>
+          <div class="bar h-full rounded-full {{ status_styles.get(s, 'bg-slate-400') }}" style="--i: {{ loop.index0 }}; width: {{ (n / count_max * 100) ~ '%' if n else '0%' }}"></div>
         </div>
       </div>
       {% endfor %}
@@ -42,7 +41,7 @@
         <div class="flex items-center gap-2 text-xs font-medium text-slate-500">
           <span class="h-2.5 w-2.5 rounded-full {{ status_styles.get(s, 'bg-slate-400') }}"></span>{{ s }}
         </div>
-        <div class="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{{ n }}</div>
+        <div class="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-slate-900">{{ n }}</div>
       </div>
       {% endfor %}
     </div>
